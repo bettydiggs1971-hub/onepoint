@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FDIC Secure Operations & Transit Dispatch Console</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            fdic: {
+              navy: '#002868',
+              dark: '#001438',
+              midnight: '#000f2b',
+              light: '#0a3d91',
+              gold: '#c59b27',
+              accent: '#e6b738',
+              slate: '#f4f7fb'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Leaflet CSS & JS (Free, open-source mapping with CartoDB Voyager / OpenStreetMap tiles - NO API key required, NO watermark) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Supabase JS CDN (Optional Cloud Sync) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; }
+    
+    /* Uber-style radar pulse halo for Vehicle Marker */
+    .vehicle-radar-marker {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .radar-pulse-ring {
+      position: absolute;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: rgba(197, 155, 39, 0.25);
+      border: 2px solid rgba(197, 155, 39, 0.8);
+      animation: vehiclePulse 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+      pointer-events: none;
+    }
+    .radar-pulse-ring-outer {
+      position: absolute;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      background: rgba(14, 165, 233, 0.15);
+      border: 1.5px dashed rgba(14, 165, 233, 0.6);
+      animation: vehiclePulseOuter 2.5s infinite linear;
+      pointer-events: none;
+    }
+    @keyframes vehiclePulse {
+      0% { transform: scale(0.5); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+    @keyframes vehiclePulseOuter {
+      0% { transform: rotate(0deg); opacity: 0.8; }
+      100% { transform: rotate(360deg); opacity: 0.2; }
+    }
+
+    .uber-car-icon-wrapper {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      background: #001438;
+      border: 2.5px solid #c59b27;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+      z-index: 2;
+    }
+
+    .collection-point-pin-wrapper {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      background: #047857;
+      border: 2.5px solid #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(4, 120, 87, 0.6);
+      z-index: 2;
+      animation: pinBounce 2s infinite;
+    }
+    @keyframes pinBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .leaflet-container {
+      font-family: 'Inter', sans-serif !important;
+      background: #e5e7eb;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col antialiased">
+
+  <!-- TOP FEDERAL HEADER -->
+  <header class="bg-fdic-dark text-white border-b border-blue-900 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full bg-fdic-navy border-2 border-fdic-gold flex items-center justify-center shadow">
+          <i class="fa-solid fa-building-columns text-fdic-gold text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-black tracking-wider text-base uppercase text-white">FDIC</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase">
+              Admin Console
+            </span>
+          </div>
+          <p class="text-[11px] text-blue-200 font-medium hidden sm:block">
+            Federal Transit Escrow & Real-Time Consignment Dispatch
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Controls -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <div id="supabaseStatusBadge" class="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 bg-blue-950/80 border border-blue-800/80 rounded-lg text-[11px] text-blue-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span id="supabaseStatusText">LocalStorage Sync Active</span>
+        </div>
+
+        <button
+          onclick="openAddCustomerModal()"
+          class="py-1.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg shadow transition flex items-center space-x-1.5"
+        >
+          <i class="fa-solid fa-user-plus text-[11px]"></i>
+          <span class="hidden sm:inline">New Customer</span>
+        </button>
+
+        <button
+          onclick="handleAdminLogout()"
+          title="Sign out to Login"
+          class="py-1.5 px-3 bg-red-900/60 hover:bg-red-800 text-red-100 font-bold text-xs rounded-lg border border-red-700/50 transition flex items-center space-x-1.5"
+        >
+          <i class="fa-solid fa-right-from-bracket text-[11px]"></i>
+          <span class="hidden sm:inline">Logout</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- SUB-NAV TAB BAR -->
+    <div class="bg-fdic-midnight/80 border-t border-blue-950 px-4 sm:px-6">
+      <div class="max-w-7xl mx-auto flex items-center space-x-1 overflow-x-auto custom-scroll py-1.5">
+        <button
+          id="tabBtn-overview"
+          onclick="switchAdminTab('overview')"
+          class="py-1.5 px-3.5 rounded-lg text-xs font-bold text-white bg-fdic-navy border border-blue-700 transition flex items-center space-x-2 shrink-0"
+        >
+          <i class="fa-solid fa-chart-line text-amber-400"></i>
+          <span>Overview</span>
+        </button>
+
+        <button
+          id="tabBtn-dispatch"
+          onclick="switchAdminTab('dispatch')"
+          class="py-1.5 px-3.5 rounded-lg text-xs font-semibold text-blue-200 hover:text-white hover:bg-blue-900/50 transition flex items-center space-x-2 shrink-0"
+        >
+          <i class="fa-solid fa-truck-fast text-emerald-400"></i>
+          <span>Transit Dispatch & Map</span>
+        </button>
+
+        <button
+          id="tabBtn-customers"
+          onclick="switchAdminTab('customers')"
+          class="py-1.5 px-3.5 rounded-lg text-xs font-semibold text-blue-200 hover:text-white hover:bg-blue-900/50 transition flex items-center space-x-2 shrink-0"
+        >
+          <i class="fa-solid fa-users text-blue-300"></i>
+          <span>Customer Registry</span>
+        </button>
+
+        <button
+          id="tabBtn-supabase"
+          onclick="switchAdminTab('supabase')"
+          class="py-1.5 px-3.5 rounded-lg text-xs font-semibold text-blue-200 hover:text-white hover:bg-blue-900/50 transition flex items-center space-x-2 shrink-0"
+        >
+          <i class="fa-solid fa-database text-purple-300"></i>
+          <span>Supabase / Cloud Sync</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ==================== TAB 1: OVERVIEW ==================== -->
+    <section id="tabContent-overview" class="space-y-6">
+      
+      <!-- KPI STATS ROW -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>Total Insured Escrow</span>
+            <i class="fa-solid fa-vault text-fdic-navy text-sm"></i>
+          </div>
+          <div id="statTotalEscrow" class="text-xl sm:text-2xl font-black text-slate-900 mt-1">$1,926,500.00</div>
+          <div class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center space-x-1">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>100% FDIC Guaranteed</span>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>Active Cases</span>
+            <i class="fa-solid fa-folder-open text-blue-600 text-sm"></i>
+          </div>
+          <div id="statActiveCount" class="text-xl sm:text-2xl font-black text-slate-900 mt-1">2 Accounts</div>
+          <div class="text-[11px] text-blue-600 font-semibold mt-1">All Escrows Verified</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>In-Transit Couriers</span>
+            <i class="fa-solid fa-car-side text-amber-500 text-sm"></i>
+          </div>
+          <div id="statInTransit" class="text-xl sm:text-2xl font-black text-slate-900 mt-1">2 Couriers</div>
+          <div class="text-[11px] text-amber-600 font-semibold mt-1 flex items-center space-x-1">
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+            <span>Live Street Tracking</span>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>Security Layer</span>
+            <i class="fa-solid fa-shield-halved text-emerald-600 text-sm"></i>
+          </div>
+          <div class="text-xl sm:text-2xl font-black text-slate-900 mt-1">Protected</div>
+          <div class="text-[11px] text-slate-500 font-mono mt-1">Action Error Triggers Active</div>
+        </div>
+      </div>
+
+      <!-- RECENT ACTIVE TRANSIT CASES TABLE -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900">Active Transit & Consignment Accounts</h2>
+            <p class="text-xs text-slate-500">Real-time custody tracking, street addresses, and action error locks</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="refreshData()" class="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center space-x-1">
+              <i class="fa-solid fa-arrows-rotate"></i>
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scroll">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100/70 border-b border-slate-200 text-slate-600 uppercase tracking-wider font-bold text-[10px]">
+                <th class="py-3 px-4">Case # / Customer</th>
+                <th class="py-3 px-4">Insured Balance</th>
+                <th class="py-3 px-4">Uber / Courier Location</th>
+                <th class="py-3 px-4">Confirmed Collection Point</th>
+                <th class="py-3 px-4">ETA & Escort</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="overviewTableBody" class="divide-y divide-slate-100 text-slate-700">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 2: TRANSIT DISPATCH & MAP ==================== -->
+    <section id="tabContent-dispatch" class="hidden space-y-6">
+      
+      <!-- Top Dispatch Selector -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600">
+            <i class="fa-solid fa-map-location-dot text-lg"></i>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Active Transit Vehicle Visualizer</h2>
+            <p class="text-xs text-slate-500">Live Uber car marker with radar halo & Confirmed Collection Point pin (No route lines)</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2 w-full sm:w-auto">
+          <label class="text-xs font-bold text-slate-600 whitespace-nowrap">Select Case:</label>
+          <select id="dispatchCustomerSelect" onchange="selectDispatchCustomer(this.value)" class="py-1.5 px-3 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-fdic-navy">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <!-- MAIN DISPATCH GRID: MAP (LEFT) & STREET ADDRESS CONTROLS (RIGHT) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- MAP CONTAINER (8 COLS) -->
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div class="p-3 bg-slate-900 text-white flex items-center justify-between text-xs">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="font-bold uppercase tracking-wider text-slate-200">Live Free CartoDB/OSM Tile Feed</span>
+            </div>
+            <div class="flex items-center space-x-3 text-[11px] text-slate-300 font-mono">
+              <span id="mapEtaBadge" class="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold border border-amber-500/30">ETA: 12 mins</span>
+              <span class="text-slate-400">Zero Watermark / No Key Required</span>
+            </div>
+          </div>
+
+          <!-- Free Leaflet Map Canvas -->
+          <div id="dispatchMap" class="w-full h-[420px] bg-slate-200 relative">
+            <!-- Map renders here -->
+          </div>
+
+          <!-- MAP FOOTER LEGEND -->
+          <div class="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+            <div class="flex items-center space-x-4">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-3.5 h-3.5 rounded-full bg-fdic-navy border border-amber-400 inline-block shadow-sm"></span>
+                <span class="font-semibold text-slate-800">Uber / Armored Transit Vehicle</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <span class="w-3.5 h-3.5 rounded-full bg-emerald-600 border border-white inline-block shadow-sm"></span>
+                <span id="legendDestinationLabel" class="font-semibold text-slate-800">Confirmed Collection Point</span>
+              </div>
+            </div>
+            <span class="text-[11px] text-slate-400 italic">No polyline routes rendered as requested</span>
+          </div>
+        </div>
+
+        <!-- STREET ADDRESS DISPATCH CONTROLS (5 COLS) -->
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <div class="border-b border-slate-100 pb-3">
+            <h3 class="font-extrabold text-sm text-slate-900 flex items-center space-x-2">
+              <i class="fa-solid fa-location-crosshairs text-fdic-navy"></i>
+              <span>Address & Dispatch Controls</span>
+            </h3>
+            <p class="text-xs text-slate-500">Edit courier street address & Confirmed Collection Point</p>
+          </div>
+
+          <form id="dispatchAddressForm" onsubmit="handleSaveDispatchAddress(event)" class="space-y-3.5 text-xs">
+            
+            <!-- UBER CURRENT STREET LOCATION -->
+            <div class="p-3 bg-blue-50/60 border border-blue-200 rounded-xl space-y-2">
+              <label class="block font-bold text-fdic-navy uppercase tracking-wider text-[11px] flex items-center justify-between">
+                <span><i class="fa-solid fa-car text-amber-600 mr-1"></i> Uber / Courier Current Street Address</span>
+              </label>
+              <div>
+                <input
+                  type="text"
+                  id="dispatchUberStreet"
+                  required
+                  placeholder="Street Address (e.g. 1401 Constitution Ave NW)"
+                  class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium focus:ring-2 focus:ring-fdic-navy focus:outline-none"
+                />
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  id="dispatchUberCity"
+                  required
+                  placeholder="City"
+                  class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium"
+                />
+                <input
+                  type="text"
+                  id="dispatchUberState"
+                  required
+                  placeholder="State"
+                  class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium"
+                />
+                <input
+                  type="text"
+                  id="dispatchUberZip"
+                  required
+                  placeholder="ZIP"
+                  class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium"
+                />
+              </div>
+            </div>
+
+            <!-- CONFIRMED COLLECTION POINT ADDRESS & CUSTOM LABEL -->
+            <div class="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="block font-bold text-emerald-900 uppercase tracking-wider text-[11px]">
+                  <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> Collection Point Label & Address
+                </label>
+              </div>
+              <div>
+                <input
+                  type="text"
+                  id="dispatchDestLabel"
+                  required
+                  placeholder="Confirmed Collection Point"
+                  title="Destination Section Title shown to Customer"
+                  class="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs text-emerald-900 font-bold focus:ring-2 focus:ring-emerald-600 focus:outline-none mb-2"
+                />
+                <input
+                  type="text"
+                  id="dispatchDestStreet"
+                  required
+                  placeholder="Street Address (e.g. 1600 Pennsylvania Ave NW)"
+                  class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                />
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  id="dispatchDestCity"
+                  required
+                  placeholder="City"
+                  class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium"
+                />
+                <input
+                  type="text"
+                  id="dispatchDestState"
+                  required
+                  placeholder="State"
+                  class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium"
+                />
+                <input
+                  type="text"
+                  id="dispatchDestZip"
+                  required
+                  placeholder="ZIP"
+                  class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-medium"
+                />
+              </div>
+            </div>
+
+            <!-- ETA & DRIVER -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Live ETA</label>
+                <input
+                  type="text"
+                  id="dispatchEtaInput"
+                  required
+                  placeholder="e.g. 12 mins"
+                  class="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900"
+                />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Courier Agent</label>
+                <input
+                  type="text"
+                  id="dispatchDriverName"
+                  required
+                  placeholder="Agent Marcus Vance"
+                  class="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900"
+                />
+              </div>
+            </div>
+
+            <!-- UPDATE BUTTON -->
+            <button
+              type="submit"
+              id="btnUpdateDispatch"
+              class="w-full py-2.5 bg-fdic-navy hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition flex items-center justify-center space-x-2"
+            >
+              <i class="fa-solid fa-satellite-dish"></i>
+              <span>Geocode & Push Street Coordinates</span>
+            </button>
+          </form>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 3: CUSTOMER REGISTRY ==================== -->
+    <section id="tabContent-customers" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900">Registered Customer Accounts</h2>
+            <p class="text-xs text-slate-500">Manage insured balances, error notice triggers, and client dashboard links</p>
+          </div>
+          <button
+            onclick="openAddCustomerModal()"
+            class="py-2 px-3.5 bg-fdic-navy hover:bg-blue-900 text-white font-bold text-xs rounded-xl shadow transition flex items-center space-x-2 self-start"
+          >
+            <i class="fa-solid fa-plus"></i>
+            <span>Add New Account</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto custom-scroll">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100/70 border-b border-slate-200 text-slate-600 uppercase tracking-wider font-bold text-[10px]">
+                <th class="py-3 px-4">Case #</th>
+                <th class="py-3 px-4">Customer Name</th>
+                <th class="py-3 px-4">Contact</th>
+                <th class="py-3 px-4">Insured Escrow</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customersTableBody" class="divide-y divide-slate-100 text-slate-700">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 4: SUPABASE / CLOUD SYNC ==================== -->
+    <section id="tabContent-supabase" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6 max-w-3xl">
+        <div>
+          <h2 class="text-base font-extrabold text-slate-900 flex items-center space-x-2">
+            <i class="fa-solid fa-cloud-arrow-up text-purple-600"></i>
+            <span>Supabase Cloud Integration & Real-Time Sync</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Connect any free Supabase project to sync transit coordinates and customer escrows live across multiple devices in real-time.
+          </p>
+        </div>
+
+        <form id="supabaseForm" onsubmit="handleSaveSupabaseConfig(event)" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Supabase Project URL</label>
+            <input
+              type="url"
+              id="supabaseUrlInput"
+              placeholder="https://xyzcompany.supabase.co"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-2 focus:ring-purple-600"
+            />
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Supabase Anon Public API Key</label>
+            <input
+              type="text"
+              id="supabaseKeyInput"
+              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-2 focus:ring-purple-600"
+            />
+          </div>
+
+          <div class="flex items-center space-x-3 pt-2">
+            <button
+              type="submit"
+              class="py-2 px-4 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl shadow transition"
+            >
+              Save & Connect Supabase
+            </button>
+            <button
+              type="button"
+              onclick="disconnectSupabase()"
+              class="py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition"
+            >
+              Use LocalStorage Only
+            </button>
+          </div>
+        </form>
+
+        <!-- SQL SCHEMA HELPER -->
+        <div class="p-4 bg-slate-900 rounded-xl text-slate-200 text-xs space-y-2">
+          <div class="flex items-center justify-between text-purple-300 font-bold">
+            <span>Supabase SQL Table Schema (Optional)</span>
+            <button onclick="copySqlSchema()" class="text-xs text-amber-400 hover:underline">Copy SQL</button>
+          </div>
+          <pre id="sqlSchemaBlock" class="p-3 bg-slate-950 rounded-lg text-[11px] font-mono overflow-x-auto text-emerald-400 custom-scroll">
+create table if not exists public.fdic_customers (
+  id text primary key,
+  case_number text,
+  first_name text,
+  last_name text,
+  phone text,
+  email text,
+  uber_address text,
+  uber_city text,
+  uber_state text,
+  uber_zip text,
+  destination_label text default 'Confirmed Collection Point',
+  destination_address text,
+  destination_city text,
+  destination_state text,
+  destination_zip text,
+  balance numeric,
+  status text,
+  driver_lat float8,
+  driver_lon float8,
+  customer_lat float8,
+  customer_lon float8,
+  eta text,
+  driver_name text,
+  driver_car text,
+  driver_plate text,
+  transfer_error_msg text,
+  billpay_error_msg text,
+  deposit_error_msg text,
+  deposit_date text,
+  password text,
+  updated_at timestamp with time zone default now()
+);
+alter publication supabase_realtime add table public.fdic_customers;
+          </pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: ADD / EDIT CUSTOMER ==================== -->
+  <div id="customerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 text-slate-900 text-xs space-y-4 shadow-2xl my-8">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <h3 id="customerModalTitle" class="font-extrabold text-sm text-fdic-navy flex items-center space-x-2">
+          <i class="fa-solid fa-user-gear text-amber-500"></i>
+          <span>Edit Customer Escrow & Dispatch</span>
+        </h3>
+        <button onclick="closeCustomerModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form id="customerForm" onsubmit="handleSaveCustomer(event)" class="space-y-4">
+        <input type="hidden" id="modalCustomerId" />
+
+        <!-- CASE NUMBER & PERSONAL INFO -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Case Number</label>
+            <input type="text" id="modalCaseNumber" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">First Name</label>
+            <input type="text" id="modalFirstName" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Last Name</label>
+            <input type="text" id="modalLastName" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Phone Number</label>
+            <input type="text" id="modalPhone" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Email Address</label>
+            <input type="email" id="modalEmail" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Insured Balance ($)</label>
+            <input type="number" step="0.01" id="modalBalance" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-emerald-700" />
+          </div>
+        </div>
+
+        <!-- STREET ADDRESS: UBER / COURIER LOCATION -->
+        <div class="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
+          <label class="block font-bold text-fdic-navy uppercase text-[11px]">
+            <i class="fa-solid fa-car text-amber-600 mr-1"></i> Uber / Courier Current Street Address
+          </label>
+          <input type="text" id="modalUberStreet" required placeholder="Street Address (e.g. 1401 Constitution Ave NW)" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+          <div class="grid grid-cols-3 gap-2">
+            <input type="text" id="modalUberCity" required placeholder="City" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+            <input type="text" id="modalUberState" required placeholder="State" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+            <input type="text" id="modalUberZip" required placeholder="ZIP" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+          </div>
+        </div>
+
+        <!-- STREET ADDRESS: CONFIRMED COLLECTION POINT & CUSTOMIZABLE LABEL -->
+        <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="block font-bold text-emerald-900 uppercase text-[11px]">
+              <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> Collection Point Section & Address
+            </label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Editable Label (Customer View)</label>
+              <input type="text" id="modalDestLabel" required placeholder="Confirmed Collection Point" class="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-emerald-900" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Street Address</label>
+              <input type="text" id="modalDestStreet" required placeholder="1600 Pennsylvania Ave NW" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <input type="text" id="modalDestCity" required placeholder="City" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+            <input type="text" id="modalDestState" required placeholder="State" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+            <input type="text" id="modalDestZip" required placeholder="ZIP" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+          </div>
+        </div>
+
+        <!-- CUSTOM ERROR NOTICES -->
+        <div class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+          <label class="block font-bold text-amber-900 uppercase text-[11px]">
+            <i class="fa-solid fa-lock text-amber-600 mr-1"></i> Client-Side Action Error Notices (Compliance Restrictions)
+          </label>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase">Transfer Action Error Message</label>
+              <input type="text" id="modalTransferError" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase">Bill Pay Action Error Message</label>
+              <input type="text" id="modalBillPayError" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase">Remote Deposit Action Error Message</label>
+              <input type="text" id="modalDepositError" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs" />
+            </div>
+          </div>
+        </div>
+
+        <!-- COURIER & ETA -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Transit ETA</label>
+            <input type="text" id="modalEta" required placeholder="12 mins" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Courier Agent Name</label>
+            <input type="text" id="modalDriverName" required placeholder="Agent Marcus Vance" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase text-[10px] mb-1">Escort Vehicle & Plate</label>
+            <input type="text" id="modalDriverCar" required placeholder="Armored Ford Transit (FDIC-8842)" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeCustomerModal()" class="py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
+            Cancel
+          </button>
+          <button type="submit" class="py-2 px-5 bg-fdic-navy hover:bg-blue-900 text-white font-bold rounded-xl shadow transition">
+            Save Changes
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: SHAREABLE LINK GENERATOR ==================== -->
+  <div id="linkModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 text-slate-900 text-xs space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+        <h3 class="font-extrabold text-sm text-fdic-navy flex items-center space-x-2">
+          <i class="fa-solid fa-link text-emerald-600"></i>
+          <span>Direct Client Portal Link</span>
+        </h3>
+        <button onclick="closeLinkModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <p class="text-slate-600">Provide this direct authenticated link to the client to open their standalone <code class="font-mono font-bold text-blue-700">dashboard.html</code> view:</p>
+        <div class="p-3 bg-slate-100 rounded-xl border border-slate-300 font-mono text-[11px] break-all text-slate-800" id="generatedClientUrlText">
+          dashboard.html?customer=c-001
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <button onclick="copyGeneratedLink()" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition flex items-center justify-center space-x-1.5">
+          <i class="fa-solid fa-copy"></i>
+          <span>Copy Link</span>
+        </button>
+        <button onclick="openGeneratedLinkInNewTab()" class="py-2.5 bg-fdic-navy hover:bg-blue-900 text-white font-bold rounded-xl shadow transition flex items-center justify-center space-x-1.5">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          <span>Open Dashboard</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    const INITIAL_CUSTOMERS = [
+      {
+        id: "c-001",
+        case_number: "FDIC-C01-SEC",
+        first_name: "Eleanor",
+        last_name: "Vance",
+        phone: "+1 (555) 019-2834",
+        email: "eleanor.vance@fdicinsured.gov",
+        uber_address: "1401 Constitution Ave NW",
+        uber_city: "Washington",
+        uber_state: "DC",
+        uber_zip: "20230",
+        destination_label: "Confirmed Collection Point",
+        destination_address: "1600 Pennsylvania Ave NW",
+        destination_city: "Washington",
+        destination_state: "DC",
+        destination_zip: "20500",
+        balance: 1284500.00,
+        status: "Active",
+        driver_lat: 38.8921,
+        driver_lon: -77.0315,
+        customer_lat: 38.8977,
+        customer_lon: -77.0365,
+        eta: "12 mins",
+        driver_name: "Agent Marcus Vance",
+        driver_car: "Armored Ford Transit 2024",
+        driver_plate: "FDIC-8842-US",
+        transfer_error_msg: "Transfer Restricted: Federal Escrow Compliance Hold #FE-4029. Funds are undergoing final consignment escort verification with your designated courier.",
+        billpay_error_msg: "Bill Pay Suspended: Account is currently in Transit Escrow Status. Third-party disbursements are locked until courier delivery is confirmed.",
+        deposit_error_msg: "Deposit Verification Locked: Inbound ACH and mobile check capture are temporarily paused pending physical handover authorization.",
+        deposit_date: "Today, 08:30:15 AM EST",
+        password: "password123",
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: "c-002",
+        case_number: "FDIC-C02-SEC",
+        first_name: "Jonathan",
+        last_name: "Hayes",
+        phone: "+1 (555) 014-9823",
+        email: "j.hayes@fdicinsured.gov",
+        uber_address: "11 W 53rd St",
+        uber_city: "New York",
+        uber_state: "NY",
+        uber_zip: "10019",
+        destination_label: "Confirmed Collection Point",
+        destination_address: "350 5th Ave",
+        destination_city: "New York",
+        destination_state: "NY",
+        destination_zip: "10118",
+        balance: 642000.00,
+        status: "Active",
+        driver_lat: 40.7614,
+        driver_lon: -73.9776,
+        customer_lat: 40.7484,
+        customer_lon: -73.9857,
+        eta: "8 mins",
+        driver_name: "Agent Sarah Sterling",
+        driver_car: "Armored Chevrolet Suburban",
+        driver_plate: "NY-FDIC-104",
+        transfer_error_msg: "Transfer Restricted: Federal Resolution Code 12-B. Transit courier handover is underway.",
+        billpay_error_msg: "Bill Pay Service Paused: Clearance protocol in progress.",
+        deposit_error_msg: "Deposit Locked: Third-party ACH transfers disabled during active escort.",
+        deposit_date: "Today, 09:12:04 AM EST",
+        password: "password123",
+        updated_at: new Date().toISOString()
+      }
+    ];
+
+    let customers = [];
+    let activeDispatchCustomerId = "c-001";
+    let dispatchMapInstance = null;
+    let dispatchVehicleMarker = null;
+    let dispatchDestinationMarker = null;
+    let supabaseClient = null;
+    let currentShareableUrl = "";
+
+    // City fallback coordinate dictionary for instant offline geocoding
+    const KNOWN_COORDINATES = {
+      "washington": { lat: 38.8951, lon: -77.0364 },
+      "dc": { lat: 38.8951, lon: -77.0364 },
+      "new york": { lat: 40.7128, lon: -74.0060 },
+      "ny": { lat: 40.7128, lon: -74.0060 },
+      "chicago": { lat: 41.8781, lon: -87.6298 },
+      "los angeles": { lat: 34.0522, lon: -118.2437 },
+      "miami": { lat: 25.7617, lon: -80.1918 },
+      "houston": { lat: 29.7604, lon: -95.3698 },
+      "dallas": { lat: 32.7767, lon: -96.7970 },
+      "atlanta": { lat: 33.7490, lon: -84.3880 }
+    };
+
+    function initData() {
+      try {
+        const stored = localStorage.getItem('fdic_customers_data');
+        if (stored) {
+          customers = JSON.parse(stored);
+        } else {
+          customers = INITIAL_CUSTOMERS;
+          localStorage.setItem('fdic_customers_data', JSON.stringify(customers));
+        }
+      } catch (e) {
+        customers = INITIAL_CUSTOMERS;
+      }
+      renderOverview();
+      renderCustomerRegistry();
+      populateDispatchSelect();
+    }
+
+    function saveCustomers() {
+      localStorage.setItem('fdic_customers_data', JSON.stringify(customers));
+      renderOverview();
+      renderCustomerRegistry();
+      populateDispatchSelect();
+
+      // If Supabase is active, sync
+      if (supabaseClient) {
+        syncAllToSupabase();
+      }
+    }
+
+    function renderOverview() {
+      let totalEscrow = 0;
+      let activeCount = 0;
+
+      const tbody = document.getElementById('overviewTableBody');
+      tbody.innerHTML = '';
+
+      customers.forEach(c => {
+        const bal = parseFloat(c.balance) || 0;
+        totalEscrow += bal;
+        if (c.status === 'Active') activeCount++;
+
+        const destLabel = c.destination_label || "Confirmed Collection Point";
+        const uberFull = `${c.uber_address || '1401 Constitution Ave NW'}, ${c.uber_city || 'Washington'}, ${c.uber_state || 'DC'} ${c.uber_zip || '20230'}`;
+        const destFull = `${c.destination_address || '1600 Pennsylvania Ave NW'}, ${c.destination_city || 'Washington'}, ${c.destination_state || 'DC'} ${c.destination_zip || '20500'}`;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+        tr.innerHTML = `
+          <td class="py-3 px-4">
+            <div class="font-mono font-bold text-fdic-navy text-xs">${c.case_number}</div>
+            <div class="font-semibold text-slate-800">${c.first_name} ${c.last_name}</div>
+            <div class="text-[10px] text-slate-400">${c.email}</div>
+          </td>
+          <td class="py-3 px-4 font-mono font-bold text-emerald-700 text-sm">
+            $${bal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </td>
+          <td class="py-3 px-4 max-w-xs">
+            <div class="font-medium text-slate-800 text-[11px] flex items-center space-x-1">
+              <i class="fa-solid fa-car text-amber-500 text-[10px]"></i>
+              <span class="truncate">${uberFull}</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 max-w-xs">
+            <div class="text-[10px] font-bold uppercase text-emerald-700">${destLabel}</div>
+            <div class="font-medium text-slate-800 text-[11px] truncate">${destFull}</div>
+          </td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded font-bold text-[10px]">
+              ETA: ${c.eta || '12 mins'}
+            </span>
+            <div class="text-[10px] text-slate-500 mt-0.5">${c.driver_name || 'Agent Courier'}</div>
+          </td>
+          <td class="py-3 px-4 text-right space-x-1">
+            <button onclick="openClientPortal('${c.id}')" title="Open Client View" class="py-1 px-2 bg-blue-50 hover:bg-blue-100 text-fdic-navy rounded border border-blue-200 font-bold text-[10px]">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Portal
+            </button>
+            <button onclick="openLinkModalForCustomer('${c.id}')" title="Share Link" class="py-1 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200 font-bold text-[10px]">
+              <i class="fa-solid fa-share-nodes"></i>
+            </button>
+            <button onclick="openEditCustomerModal('${c.id}')" title="Edit Customer" class="py-1 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-300 font-bold text-[10px]">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('statTotalEscrow').innerText = `$${totalEscrow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('statActiveCount').innerText = `${activeCount} Accounts`;
+      document.getElementById('statInTransit').innerText = `${customers.length} Couriers`;
+    }
+
+    function renderCustomerRegistry() {
+      const tbody = document.getElementById('customersTableBody');
+      tbody.innerHTML = '';
+
+      customers.forEach(c => {
+        const bal = parseFloat(c.balance) || 0;
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-mono font-bold text-fdic-navy">${c.case_number}</td>
+          <td class="py-3 px-4 font-semibold text-slate-800">${c.first_name} ${c.last_name}</td>
+          <td class="py-3 px-4">
+            <div>${c.phone}</div>
+            <div class="text-[10px] text-slate-400">${c.email}</div>
+          </td>
+          <td class="py-3 px-4 font-mono font-bold text-emerald-700">$${bal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+              ${c.status || 'Active'}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right space-x-1">
+            <button onclick="openClientPortal('${c.id}')" class="py-1 px-2 bg-blue-50 text-blue-700 rounded border border-blue-200 font-bold text-[10px]">
+              Portal
+            </button>
+            <button onclick="openEditCustomerModal('${c.id}')" class="py-1 px-2 bg-slate-100 text-slate-700 rounded border border-slate-200 font-bold text-[10px]">
+              Edit
+            </button>
+            <button onclick="deleteCustomer('${c.id}')" class="py-1 px-2 bg-red-50 text-red-700 rounded border border-red-200 font-bold text-[10px]">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function populateDispatchSelect() {
+      const sel = document.getElementById('dispatchCustomerSelect');
+      sel.innerHTML = '';
+      customers.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.innerText = `${c.case_number} - ${c.first_name} ${c.last_name}`;
+        if (c.id === activeDispatchCustomerId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    function selectDispatchCustomer(customerId) {
+      activeDispatchCustomerId = customerId;
+      loadDispatchFormForCustomer(customerId);
+      updateDispatchMap();
+    }
+
+    function loadDispatchFormForCustomer(customerId) {
+      const c = customers.find(x => x.id === customerId);
+      if (!c) return;
+
+      document.getElementById('dispatchUberStreet').value = c.uber_address || "1401 Constitution Ave NW";
+      document.getElementById('dispatchUberCity').value = c.uber_city || "Washington";
+      document.getElementById('dispatchUberState').value = c.uber_state || "DC";
+      document.getElementById('dispatchUberZip').value = c.uber_zip || "20230";
+
+      document.getElementById('dispatchDestLabel').value = c.destination_label || "Confirmed Collection Point";
+      document.getElementById('dispatchDestStreet').value = c.destination_address || "1600 Pennsylvania Ave NW";
+      document.getElementById('dispatchDestCity').value = c.destination_city || "Washington";
+      document.getElementById('dispatchDestState').value = c.destination_state || "DC";
+      document.getElementById('dispatchDestZip').value = c.destination_zip || "20500";
+
+      document.getElementById('dispatchEtaInput').value = c.eta || "12 mins";
+      document.getElementById('dispatchDriverName').value = c.driver_name || "Agent Marcus Vance";
+
+      document.getElementById('mapEtaBadge').innerText = `ETA: ${c.eta || '12 mins'}`;
+      document.getElementById('legendDestinationLabel').innerText = c.destination_label || "Confirmed Collection Point";
+    }
+
+    /* INITIALIZE MAP - 100% Free CartoDB Voyager / OpenStreetMap (No API key, No watermark) */
+    function initDispatchMap() {
+      if (dispatchMapInstance) return;
+
+      const mapContainer = document.getElementById('dispatchMap');
+      if (!mapContainer) return;
+
+      dispatchMapInstance = L.map('dispatchMap', {
+        zoomControl: true,
+        attributionControl: false
+      }).setView([38.8951, -77.0364], 14);
+
+      // CartoDB Voyager free raster tiles
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+      }).addTo(dispatchMapInstance);
+
+      updateDispatchMap();
+    }
+
+    function updateDispatchMap() {
+      if (!dispatchMapInstance) return;
+
+      const c = customers.find(x => x.id === activeDispatchCustomerId) || customers[0];
+      if (!c) return;
+
+      const driverLat = c.driver_lat || 38.8921;
+      const driverLon = c.driver_lon || -77.0315;
+      const destLat = c.customer_lat || 38.8977;
+      const destLon = c.customer_lon || -77.0365;
+
+      // 1. VEHICLE MARKER (Top-down Uber radar pulse halo icon)
+      const vehicleHtml = `
+        <div class="vehicle-radar-marker">
+          <div class="radar-pulse-ring"></div>
+          <div class="radar-pulse-ring-outer"></div>
+          <div class="uber-car-icon-wrapper">
+            <i class="fa-solid fa-car text-fdic-gold text-lg"></i>
+          </div>
+        </div>
+      `;
+      const vehicleIcon = L.divIcon({
+        className: 'custom-vehicle-div',
+        html: vehicleHtml,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+
+      if (dispatchVehicleMarker) {
+        dispatchVehicleMarker.setLatLng([driverLat, driverLon]);
+      } else {
+        dispatchVehicleMarker = L.marker([driverLat, driverLon], { icon: vehicleIcon }).addTo(dispatchMapInstance);
+      }
+      dispatchVehicleMarker.bindPopup(`<b>Transit Escort:</b> ${c.driver_name || 'Agent Courier'}<br><b>Current:</b> ${c.uber_address || 'Street'}`);
+
+      // 2. CONFIRMED COLLECTION POINT MARKER (Pushpin icon)
+      const destLabel = c.destination_label || "Confirmed Collection Point";
+      const destHtml = `
+        <div class="collection-point-pin-wrapper">
+          <i class="fa-solid fa-location-dot text-white text-lg"></i>
+        </div>
+      `;
+      const destIcon = L.divIcon({
+        className: 'custom-dest-div',
+        html: destHtml,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+
+      if (dispatchDestinationMarker) {
+        dispatchDestinationMarker.setLatLng([destLat, destLon]);
+      } else {
+        dispatchDestinationMarker = L.marker([destLat, destLon], { icon: destIcon }).addTo(dispatchMapInstance);
+      }
+      dispatchDestinationMarker.bindPopup(`<b>${destLabel}</b><br>${c.destination_address || 'Address'}`);
+
+      // Fit bounds to show both pins comfortably (No polyline route line)
+      const bounds = L.latLngBounds([[driverLat, driverLon], [destLat, destLon]]);
+      dispatchMapInstance.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
+    }
+
+    /* GEOCODE ADDRESS TO COORDINATES (Free Nominatim + Intelligent City Fallback) */
+    async function geocodeAddress(street, city, state, zip) {
+      const fullQuery = `${street}, ${city}, ${state} ${zip}, USA`.trim();
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery)}&limit=1`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          }
+        }
+      } catch (e) {
+        console.warn("Live geocode fallback used:", e);
+      }
+
+      // City dictionary fallback with subtle street variation
+      const cityKey = (city || '').toLowerCase().trim();
+      const stateKey = (state || '').toLowerCase().trim();
+      const base = KNOWN_COORDINATES[cityKey] || KNOWN_COORDINATES[stateKey] || { lat: 38.8951, lon: -77.0364 };
+      const hash = (street + zip).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const deltaLat = ((hash % 100) - 50) * 0.00015;
+      const deltaLon = (((hash * 3) % 100) - 50) * 0.00015;
+
+      return {
+        lat: base.lat + deltaLat,
+        lon: base.lon + deltaLon
+      };
+    }
+
+    async function handleSaveDispatchAddress(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnUpdateDispatch');
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Geocoding & Updating...</span>`;
+      btn.disabled = true;
+
+      const c = customers.find(x => x.id === activeDispatchCustomerId);
+      if (!c) return;
+
+      c.uber_address = document.getElementById('dispatchUberStreet').value.trim();
+      c.uber_city = document.getElementById('dispatchUberCity').value.trim();
+      c.uber_state = document.getElementById('dispatchUberState').value.trim();
+      c.uber_zip = document.getElementById('dispatchUberZip').value.trim();
+
+      c.destination_label = document.getElementById('dispatchDestLabel').value.trim() || "Confirmed Collection Point";
+      c.destination_address = document.getElementById('dispatchDestStreet').value.trim();
+      c.destination_city = document.getElementById('dispatchDestCity').value.trim();
+      c.destination_state = document.getElementById('dispatchDestState').value.trim();
+      c.destination_zip = document.getElementById('dispatchDestZip').value.trim();
+
+      c.eta = document.getElementById('dispatchEtaInput').value.trim();
+      c.driver_name = document.getElementById('dispatchDriverName').value.trim();
+      c.updated_at = new Date().toISOString();
+
+      // Geocode both addresses
+      const uberCoords = await geocodeAddress(c.uber_address, c.uber_city, c.uber_state, c.uber_zip);
+      const destCoords = await geocodeAddress(c.destination_address, c.destination_city, c.destination_state, c.destination_zip);
+
+      c.driver_lat = uberCoords.lat;
+      c.driver_lon = uberCoords.lon;
+      c.customer_lat = destCoords.lat;
+      c.customer_lon = destCoords.lon;
+
+      saveCustomers();
+      updateDispatchMap();
+
+      document.getElementById('mapEtaBadge').innerText = `ETA: ${c.eta}`;
+      document.getElementById('legendDestinationLabel').innerText = c.destination_label;
+
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> <span>Geocode & Push Street Coordinates</span>`;
+      alert("Street addresses geocoded and transit coordinates updated successfully!");
+    }
+
+    /* MODAL OPERATIONS */
+    function openAddCustomerModal() {
+      document.getElementById('customerModalTitle').innerHTML = `<i class="fa-solid fa-user-plus text-amber-500"></i> <span>Add New Customer Account</span>`;
+      document.getElementById('modalCustomerId').value = "c-" + String(Date.now()).slice(-4);
+      document.getElementById('modalCaseNumber').value = "FDIC-C" + String(customers.length + 1).padStart(2, '0') + "-SEC";
+      document.getElementById('modalFirstName').value = "";
+      document.getElementById('modalLastName').value = "";
+      document.getElementById('modalPhone').value = "+1 (555) ";
+      document.getElementById('modalEmail').value = "";
+      document.getElementById('modalBalance').value = "500000.00";
+
+      document.getElementById('modalUberStreet').value = "1401 Constitution Ave NW";
+      document.getElementById('modalUberCity').value = "Washington";
+      document.getElementById('modalUberState').value = "DC";
+      document.getElementById('modalUberZip').value = "20230";
+
+      document.getElementById('modalDestLabel').value = "Confirmed Collection Point";
+      document.getElementById('modalDestStreet').value = "1600 Pennsylvania Ave NW";
+      document.getElementById('modalDestCity').value = "Washington";
+      document.getElementById('modalDestState').value = "DC";
+      document.getElementById('modalDestZip').value = "20500";
+
+      document.getElementById('modalTransferError').value = "Transfer Restricted: Federal Escrow Compliance Hold. Funds are undergoing final consignment escort verification.";
+      document.getElementById('modalBillPayError').value = "Bill Pay Suspended: Account is currently in Transit Escrow Status.";
+      document.getElementById('modalDepositError').value = "Deposit Locked: Physical consignment handover authorization required.";
+
+      document.getElementById('modalEta').value = "15 mins";
+      document.getElementById('modalDriverName').value = "Agent Marcus Vance";
+      document.getElementById('modalDriverCar').value = "Armored Ford Transit (FDIC-8842)";
+
+      document.getElementById('customerModal').classList.remove('hidden');
+      document.getElementById('customerModal').classList.add('flex');
+    }
+
+    function openEditCustomerModal(customerId) {
+      const c = customers.find(x => x.id === customerId);
+      if (!c) return;
+
+      document.getElementById('customerModalTitle').innerHTML = `<i class="fa-solid fa-user-gear text-amber-500"></i> <span>Edit Customer Escrow & Dispatch</span>`;
+      document.getElementById('modalCustomerId').value = c.id;
+      document.getElementById('modalCaseNumber').value = c.case_number;
+      document.getElementById('modalFirstName').value = c.first_name;
+      document.getElementById('modalLastName').value = c.last_name;
+      document.getElementById('modalPhone').value = c.phone;
+      document.getElementById('modalEmail').value = c.email;
+      document.getElementById('modalBalance').value = c.balance;
+
+      document.getElementById('modalUberStreet').value = c.uber_address || "1401 Constitution Ave NW";
+      document.getElementById('modalUberCity').value = c.uber_city || "Washington";
+      document.getElementById('modalUberState').value = c.uber_state || "DC";
+      document.getElementById('modalUberZip').value = c.uber_zip || "20230";
+
+      document.getElementById('modalDestLabel').value = c.destination_label || "Confirmed Collection Point";
+      document.getElementById('modalDestStreet').value = c.destination_address || "1600 Pennsylvania Ave NW";
+      document.getElementById('modalDestCity').value = c.destination_city || "Washington";
+      document.getElementById('modalDestState').value = c.destination_state || "DC";
+      document.getElementById('modalDestZip').value = c.destination_zip || "20500";
+
+      document.getElementById('modalTransferError').value = c.transfer_error_msg || "Transfer Restricted: Federal Compliance Hold.";
+      document.getElementById('modalBillPayError').value = c.billpay_error_msg || "Bill Pay Suspended: Account in transit.";
+      document.getElementById('modalDepositError').value = c.deposit_error_msg || "Deposit Locked: Handover in progress.";
+
+      document.getElementById('modalEta').value = c.eta || "12 mins";
+      document.getElementById('modalDriverName').value = c.driver_name || "Agent Courier";
+      document.getElementById('modalDriverCar').value = c.driver_car || "Armored Transit";
+
+      document.getElementById('customerModal').classList.remove('hidden');
+      document.getElementById('customerModal').classList.add('flex');
+    }
+
+    function closeCustomerModal() {
+      document.getElementById('customerModal').classList.add('hidden');
+      document.getElementById('customerModal').classList.remove('flex');
+    }
+
+    async function handleSaveCustomer(e) {
+      e.preventDefault();
+      const id = document.getElementById('modalCustomerId').value;
+      let c = customers.find(x => x.id === id);
+
+      const isNew = !c;
+      if (isNew) {
+        c = { id: id, status: "Active", password: "password123", deposit_date: "Today, 09:00 AM EST" };
+        customers.push(c);
+      }
+
+      c.case_number = document.getElementById('modalCaseNumber').value.trim();
+      c.first_name = document.getElementById('modalFirstName').value.trim();
+      c.last_name = document.getElementById('modalLastName').value.trim();
+      c.phone = document.getElementById('modalPhone').value.trim();
+      c.email = document.getElementById('modalEmail').value.trim();
+      c.balance = parseFloat(document.getElementById('modalBalance').value) || 0;
+
+      c.uber_address = document.getElementById('modalUberStreet').value.trim();
+      c.uber_city = document.getElementById('modalUberCity').value.trim();
+      c.uber_state = document.getElementById('modalUberState').value.trim();
+      c.uber_zip = document.getElementById('modalUberZip').value.trim();
+
+      c.destination_label = document.getElementById('modalDestLabel').value.trim() || "Confirmed Collection Point";
+      c.destination_address = document.getElementById('modalDestStreet').value.trim();
+      c.destination_city = document.getElementById('modalDestCity').value.trim();
+      c.destination_state = document.getElementById('modalDestState').value.trim();
+      c.destination_zip = document.getElementById('modalDestZip').value.trim();
+
+      c.transfer_error_msg = document.getElementById('modalTransferError').value.trim();
+      c.billpay_error_msg = document.getElementById('modalBillPayError').value.trim();
+      c.deposit_error_msg = document.getElementById('modalDepositError').value.trim();
+
+      c.eta = document.getElementById('modalEta').value.trim();
+      c.driver_name = document.getElementById('modalDriverName').value.trim();
+      c.driver_car = document.getElementById('modalDriverCar').value.trim();
+      c.updated_at = new Date().toISOString();
+
+      // Geocode
+      const uberCoords = await geocodeAddress(c.uber_address, c.uber_city, c.uber_state, c.uber_zip);
+      const destCoords = await geocodeAddress(c.destination_address, c.destination_city, c.destination_state, c.destination_zip);
+      c.driver_lat = uberCoords.lat;
+      c.driver_lon = uberCoords.lon;
+      c.customer_lat = destCoords.lat;
+      c.customer_lon = destCoords.lon;
+
+      saveCustomers();
+      closeCustomerModal();
+      alert("Customer record saved successfully!");
+    }
+
+    function deleteCustomer(customerId) {
+      if (customers.length <= 1) {
+        alert("Cannot delete the only customer account in the system.");
+        return;
+      }
+      if (confirm("Are you sure you want to remove this customer escrow record?")) {
+        customers = customers.filter(x => x.id !== customerId);
+        saveCustomers();
+      }
+    }
+
+    function openClientPortal(customerId) {
+      const c = customers.find(x => x.id === customerId);
+      if (c) localStorage.setItem('fdic_active_customer', JSON.stringify(c));
+      window.location.href = `dashboard.html?customer=${encodeURIComponent(customerId)}`;
+    }
+
+    function openLinkModalForCustomer(customerId) {
+      const currentUrl = window.location.href.split('admin.html')[0];
+      currentShareableUrl = `${currentUrl}dashboard.html?customer=${encodeURIComponent(customerId)}`;
+      document.getElementById('generatedClientUrlText').innerText = currentShareableUrl;
+      document.getElementById('linkModal').classList.remove('hidden');
+      document.getElementById('linkModal').classList.add('flex');
+    }
+
+    function closeLinkModal() {
+      document.getElementById('linkModal').classList.add('hidden');
+      document.getElementById('linkModal').classList.remove('flex');
+    }
+
+    function copyGeneratedLink() {
+      navigator.clipboard.writeText(currentShareableUrl).then(() => {
+        alert("Client Dashboard Link copied to clipboard!");
+      });
+    }
+
+    function openGeneratedLinkInNewTab() {
+      window.open(currentShareableUrl, '_blank');
+    }
+
+    function switchAdminTab(tabName) {
+      ['overview', 'dispatch', 'customers', 'supabase'].forEach(t => {
+        const content = document.getElementById(`tabContent-${t}`);
+        const btn = document.getElementById(`tabBtn-${t}`);
+        if (t === tabName) {
+          content.classList.remove('hidden');
+          btn.className = "py-1.5 px-3.5 rounded-lg text-xs font-bold text-white bg-fdic-navy border border-blue-700 transition flex items-center space-x-2 shrink-0";
+        } else {
+          content.classList.add('hidden');
+          btn.className = "py-1.5 px-3.5 rounded-lg text-xs font-semibold text-blue-200 hover:text-white hover:bg-blue-900/50 transition flex items-center space-x-2 shrink-0";
+        }
+      });
+
+      if (tabName === 'dispatch') {
+        setTimeout(() => {
+          initDispatchMap();
+          loadDispatchFormForCustomer(activeDispatchCustomerId);
+          if (dispatchMapInstance) dispatchMapInstance.invalidateSize();
+        }, 150);
+      }
+    }
+
+    function refreshData() {
+      initData();
+      alert("Data refreshed from storage.");
+    }
+
+    function handleAdminLogout() {
+      localStorage.removeItem('fdic_admin_session');
+      window.location.href = "index.html";
+    }
+
+    function copySqlSchema() {
+      const txt = document.getElementById('sqlSchemaBlock').innerText;
+      navigator.clipboard.writeText(txt).then(() => alert("SQL Schema copied!"));
+    }
+
+    function handleSaveSupabaseConfig(e) {
+      e.preventDefault();
+      const url = document.getElementById('supabaseUrlInput').value.trim();
+      const key = document.getElementById('supabaseKeyInput').value.trim();
+      if (!url || !key) {
+        alert("Please enter both URL and Anon API key.");
+        return;
+      }
+      localStorage.setItem('fdic_supabase_url', url);
+      localStorage.setItem('fdic_supabase_key', key);
+      initSupabase();
+      alert("Supabase Cloud credentials stored. Syncing data...");
+    }
+
+    function disconnectSupabase() {
+      localStorage.removeItem('fdic_supabase_url');
+      localStorage.removeItem('fdic_supabase_key');
+      supabaseClient = null;
+      document.getElementById('supabaseStatusText').innerText = "LocalStorage Sync Active";
+      alert("Switched back to local on-device storage.");
+    }
+
+    function initSupabase() {
+      const url = localStorage.getItem('fdic_supabase_url');
+      const key = localStorage.getItem('fdic_supabase_key');
+      if (url && key && window.supabase) {
+        try {
+          supabaseClient = window.supabase.createClient(url, key);
+          document.getElementById('supabaseStatusText').innerText = "Supabase Cloud Connected";
+          document.getElementById('supabaseUrlInput').value = url;
+          document.getElementById('supabaseKeyInput').value = key;
+        } catch (e) {
+          console.error("Supabase init error:", e);
+        }
+      }
+    }
+
+    async function syncAllToSupabase() {
+      if (!supabaseClient) return;
+      try {
+        for (const c of customers) {
+          await supabaseClient.from('fdic_customers').upsert(c, { onConflict: 'id' });
+        }
+      } catch (err) {
+        console.warn("Supabase upsert error:", err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initData();
+      initSupabase();
+    });
+  </script>
+</body>
+</html>
