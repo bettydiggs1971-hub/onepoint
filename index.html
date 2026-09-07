@@ -1,486 +1,868 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEGA MILLIONS - Official Prize Notification</title>
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #d32f2f; /* Red */
-            --secondary: #1976d2; /* Blue */
-            --accent: #ffb300; /* Gold */
-            --text-dark: #333;
-            --text-light: #fff;
-            --glass: rgba(255, 255, 255, 0.95);
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
-        body {
-            min-height: 100vh;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            transition: background-image 0.5s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        /* Container Card */
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background: var(--glass);
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            padding: 30px;
-            text-align: center;
-            position: relative;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255,255,255,0.5);
-        }
-
-        /* Header & Logos */
-        .logo-area { margin-bottom: 20px; }
-        .mega-logo {
-            font-size: 2rem;
-            font-weight: 900;
-            background: -webkit-linear-gradient(45deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        .badge-row {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            font-size: 0.8rem;
-            color: #555;
-        }
-        .badge {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: #eee;
-            padding: 5px 10px;
-            border-radius: 20px;
-        }
-        .badge i { color: var(--secondary); }
-
-        /* Typography */
-        h1 { font-size: 1.5rem; margin-bottom: 10px; color: var(--text-dark); }
-        .highlight { color: #ff9800; font-weight: bold; }
-        p.sub-text { color: #666; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5; }
-
-        /* Buttons */
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-            margin-bottom: 10px;
-        }
-        .btn-primary {
-            background: linear-gradient(to right, var(--primary), #b71c1c);
-            color: white;
-            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
-        }
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
-        }
-        .btn:active { transform: scale(0.98); }
-
-        /* Inputs */
-        .input-group { margin-bottom: 20px; text-align: left; }
-        .input-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
-        .input-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 1rem;
-        }
-
-        /* Dashboard Styles */
-        .dashboard-view { display: none; text-align: left; }
-        .dashboard-view.active { display: block; }
-        .dashboard-header { text-align: center; margin-bottom: 20px; }
-        .win-amount {
-            font-size: 2.5rem;
-            color: var(--secondary);
-            font-weight: 800;
-            text-align: center;
-            margin: 15px 0;
-            text-shadow: 1px 1px 0px #ddd;
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 0.95rem;
-        }
-        .detail-label { font-weight: 600; color: #555; }
-        
-        .agent-box {
-            background: #e3f2fd;
-            border: 1px solid #90caf9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            text-align: center;
-        }
-        .status-badge {
-            display: inline-block;
-            background: #4caf50;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            margin-bottom: 5px;
-        }
-
-        /* Admin Panel */
-        .admin-panel { display: none; padding-top: 10px; }
-        .admin-panel.active { display: block; }
-        .admin-controls { margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 15px; }
-        .admin-controls h3 { font-size: 1.1rem; margin-bottom: 10px; }
-        .admin-btn { width: auto; display: inline-block; padding: 8px 15px; font-size: 0.9rem; margin-right: 5px; }
-
-        /* Modal */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 100; 
-            left: 0; top: 0; 
-            width: 100%; height: 100%; 
-            background-color: rgba(0,0,0,0.6); 
-            align-items: center; justify-content: center;
-        }
-        .modal-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .close-modal { float: right; font-size: 20px; cursor: pointer; color: #aaa; }
-
-        /* Loader */
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; margin: 10px auto; display: none; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* View Toggles */
-        .view { display: none; }
-        .view.active { display: block; }
-
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reader's Digest Prize Verification & Winner Claims Portal</title>
+  <meta name="description" content="Official Reader's Digest prize verification and claim code portal.">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Google Fonts: Playfair Display, Lora, Plus Jakarta Sans, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .font-serif-rd {
+      font-family: 'Playfair Display', 'Lora', Georgia, serif;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pulse-glow {
+      animation: pulseGlow 2s infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+      50% { box-shadow: 0 0 0 14px rgba(220, 38, 38, 0); }
+    }
+  </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-900 min-h-screen antialiased flex flex-col justify-between selection:bg-red-500 selection:text-white">
 
-    <div class="container">
-        <!-- Header -->
-        <div class="logo-area">
-            <div class="mega-logo">MEGA MILLIONS</div>
+  <!-- ================= APP CONTAINER ================= -->
+  <div id="app" class="relative min-h-screen flex flex-col">
+
+    <!-- 1. HERO / LANDING VIEW -->
+    <main id="view-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden">
+      <!-- Background Image with Overlay -->
+      <div id="hero-bg-container" class="absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none" style="background-image: url('https://images.unsplash.com/photo-1516726817505-f5ed825624d8?auto=format&fit=crop&w=1920&q=80');">
+        <div id="hero-overlay" class="absolute inset-0 bg-slate-950/70"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-slate-950/80"></div>
+      </div>
+
+      <!-- Top Header -->
+      <header class="relative z-10 w-full px-4 sm:px-8 py-5 max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3.5">
+          <!-- Square RD Logo -->
+          <div class="relative inline-flex items-center justify-center shrink-0 aspect-square bg-[#E31B23] text-white w-11 h-11 rounded-xl shadow-md overflow-hidden">
+            <svg viewBox="0 0 100 100" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <text x="50" y="53" dominant-baseline="central" text-anchor="middle" fill="#FFFFFF" font-family="'Playfair Display', 'Lora', Georgia, serif" font-size="54" font-weight="900" letter-spacing="-1.5">RD</text>
+            </svg>
+          </div>
+          <div>
+            <h1 id="landing-brand-name" class="text-white font-serif-rd font-bold tracking-tight text-xl sm:text-2xl drop-shadow-md">
+              Reader's Digest
+            </h1>
+            <p id="landing-brand-subtitle" class="text-slate-300 text-xs font-medium tracking-wide">
+              Official Prize Verification & Winner Claims Bureau
+            </p>
+          </div>
         </div>
 
-        <!-- Landing View -->
-        <div id="landing-view" class="view active">
-            <h1>OFFICIAL PRIZE NOTIFICATION</h1>
-            <h2>Your Moment Could Be <span class="highlight">Life-Changing</span></h2>
-            <p class="sub-text">Our records show you may be eligible for a prize. Enter your unique claim code to verify your status.</p>
-            
-            <button class="btn btn-primary" onclick="openModal('winner')">LET'S GO!</button>
-            <button class="btn btn-secondary" onclick="openModal('admin')">Admin Access</button>
+        <!-- Fiduciary Security Badge -->
+        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-300 bg-slate-900/70 px-4 py-2 rounded-full border border-slate-700/60 backdrop-blur-md">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span class="font-semibold text-slate-200">Fiduciary Verification Gateway</span>
+        </div>
+      </header>
+
+      <!-- Central Hero Interactive Area -->
+      <div class="relative z-10 w-full max-w-4xl mx-auto px-4 py-8 sm:py-12 my-auto text-center flex flex-col items-center">
+        <!-- Badge -->
+        <div id="landing-badge-container" class="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold text-xs sm:text-sm tracking-wider uppercase mb-5 shadow-lg backdrop-blur-md">
+          <span id="landing-badge-text">OFFICIAL DRAW NOTIFICATION</span>
         </div>
 
-        <!-- Dashboard View -->
-        <div id="dashboard-view" class="view dashboard-view">
-            <div class="dashboard-header">
-                <i class="fas fa-trophy" style="color: gold; font-size: 2rem;"></i>
-                <h2>Congratulations!</h2>
-                <p>You are the lucky winner</p>
-            </div>
+        <!-- READER'S DIGEST: Largest font on the Landing Page -->
+        <h1 id="landing-main-title" class="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-serif-rd font-black text-white tracking-tight leading-none mb-4 drop-shadow-[0_10px_35px_rgba(0,0,0,0.8)]">
+          Reader's Digest
+        </h1>
 
-            <div class="win-amount" id="dash-amount">$14,500,000</div>
+        <!-- Headline -->
+        <h2 id="landing-headline" class="text-xl sm:text-3xl lg:text-4xl font-serif-rd font-bold text-amber-300 tracking-tight leading-snug mb-4 max-w-3xl drop-shadow-lg">
+          Your Moment Could Be Life-Changing
+        </h2>
 
-            <div class="detail-row">
-                <span class="detail-label">Winner Name:</span>
-                <span id="dash-name" style="color: #333; font-weight:bold;">John Doe</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Other Prize:</span>
-                <span id="dash-prize">2024 Audi A5</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Claim Code:</span>
-                <span id="dash-code">MM-9928-XJ</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Applicable Fees (Taxes):</span>
-                <span id="dash-taxes" style="color: red;">$2,500.00</span>
-            </div>
+        <!-- Subheadline -->
+        <p id="landing-subheadline" class="text-sm sm:text-lg text-slate-200 max-w-2xl mx-auto mb-9 leading-relaxed drop-shadow-md font-normal">
+          Our records show you may be eligible for a prize. Enter your unique claim code and see if you're our next big winner!
+        </p>
 
-            <div class="agent-box">
-                <div class="status-badge" id="agent-status">Available</div>
-                <h4>Claims Agent</h4>
-                <p id="agent-name"><strong>Sarah Jenkins</strong></p>
-                <p id="agent-contact">+1 (555) 012-3456</p>
-            </div>
+        <!-- Primary Call to Action Button: LET'S GO! -->
+        <button id="btn-lets-go" onclick="openClaimModal()" class="group relative px-10 sm:px-14 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-red-600 via-red-500 to-red-600 hover:from-red-500 hover:to-red-600 text-white font-black text-2xl sm:text-3xl tracking-wide shadow-[0_0_50px_rgba(220,38,38,0.5)] hover:shadow-[0_0_70px_rgba(220,38,38,0.8)] hover:scale-105 active:scale-95 transition-all duration-200 border-2 border-red-400/60 flex items-center justify-center gap-4 cursor-pointer pulse-glow">
+          <span>Let's Go!</span>
+          <span class="text-2xl transition-transform group-hover:translate-x-2">→</span>
+        </button>
 
-            <br>
-            <button class="btn btn-secondary" onclick="logout()">Close</button>
+        <!-- Trust Badges -->
+        <div class="mt-10 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs font-semibold text-slate-300">
+          <div class="flex items-center gap-2 bg-slate-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-sm">
+            <span>🛡️</span> <span>Secure & Verified</span>
+          </div>
+          <div class="flex items-center gap-2 bg-slate-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-sm">
+            <span>🏆</span> <span>No Purchase Necessary</span>
+          </div>
+          <div class="flex items-center gap-2 bg-slate-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-sm">
+            <span>🔒</span> <span>Confidential Draw</span>
+          </div>
         </div>
+      </div>
+
+      <!-- Footer Info -->
+      <footer class="relative z-10 w-full px-4 py-5 max-w-7xl mx-auto text-center text-xs text-slate-400/90 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>© 2026 Reader's Digest. Registered Sweepstakes & Winner Award Notification Bureau.</p>
+        <p class="text-[11px] text-slate-400 font-mono-code">Protected by 256-Bit SSL Encryption • Federal Draw Regulations</p>
+      </footer>
+    </main>
+
+    <!-- 2. CLAIM CODE / ADMIN VERIFICATION MODAL -->
+    <div id="claim-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden transition-opacity">
+      <div class="bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-800 relative text-slate-100">
+        <button onclick="closeClaimModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-200 p-2 rounded-full hover:bg-slate-800 text-lg font-bold">
+          ✕
+        </button>
+
+        <div class="text-center mb-6">
+          <div class="flex justify-center mb-3">
+            <div class="relative inline-flex items-center justify-center shrink-0 aspect-square bg-[#E31B23] text-white w-14 h-14 rounded-2xl shadow-md overflow-hidden">
+              <svg viewBox="0 0 100 100" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <text x="50" y="53" dominant-baseline="central" text-anchor="middle" fill="#FFFFFF" font-family="'Playfair Display', 'Lora', Georgia, serif" font-size="54" font-weight="900" letter-spacing="-1.5">RD</text>
+              </svg>
+            </div>
+          </div>
+          <h3 id="modal-title" class="text-xl sm:text-2xl font-serif-rd font-bold text-white">Enter Your Claim Code</h3>
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+            Please enter your assigned Claim Code to access your official winner dashboard.
+          </p>
+        </div>
+
+        <form id="claim-form" onsubmit="handleClaimSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-[11px] font-mono-code font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Claim Code / Access Key
+            </label>
+            <input 
+              type="text" 
+              id="claim-code-input" 
+              placeholder="e.g. A7B9-0042" 
+              class="w-full px-4 py-3.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 font-mono-code text-center text-lg font-black tracking-widest uppercase text-white outline-none transition-all placeholder:text-slate-600" 
+              required 
+              autocomplete="off"
+            />
+          </div>
+
+          <div id="modal-error" class="hidden text-xs text-red-400 bg-red-950/80 p-3 rounded-xl border border-red-800 text-center font-medium"></div>
+
+          <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold text-sm tracking-wide shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer">
+            <span>Verify & Authenticate Access</span>
+            <span>→</span>
+          </button>
+
+          <div class="text-center text-[11px] font-mono-code text-slate-400 pt-2 flex items-center justify-center gap-1.5">
+            <span class="text-emerald-400">🛡️</span> 256-Bit SSL Encrypted Session
+          </div>
+        </form>
+      </div>
     </div>
 
-    <!-- Modal -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeModal()">&times;</span>
-            <h3 id="modal-title" style="margin-bottom: 15px;">Enter Claim Code</h3>
-            <div class="input-group">
-                <input type="text" id="claim-input" placeholder="e.g. MM-1234-AB">
-            </div>
-            <div class="loader" id="loader"></div>
-            <button class="btn btn-primary" onclick="processInput()">Verify Code</button>
-            <p id="error-msg" style="color: red; margin-top: 10px; display: none;">Invalid Code or Password</p>
-        </div>
-    </div>
-
-    <script>
-        // --- CONFIGURATION ---
-        // REPLACE THESE WITH YOUR SUPABASE KEYS
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL'; 
-        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    <!-- 3. WINNER DASHBOARD VIEW -->
+    <main id="view-winner-dashboard" class="hidden min-h-screen bg-slate-100 text-slate-900 py-6 sm:py-10 px-4 sm:px-6 relative overflow-x-hidden">
+      <div class="relative z-10 max-w-3xl mx-auto w-full space-y-6">
         
-        const ADMIN_PASSWORD = 'luckybadness818';
-        let currentMode = 'winner'; // 'winner' or 'admin'
+        <!-- Top Header: Balanced Layout, No Icon beside Sign Out -->
+        <header class="flex items-center justify-between bg-white px-5 sm:px-6 py-4 rounded-2xl border border-slate-200/90 shadow-sm">
+          <div class="flex items-center gap-3.5">
+            <div class="relative inline-flex items-center justify-center shrink-0 aspect-square bg-[#E31B23] text-white w-9 h-9 rounded-xl shadow-sm overflow-hidden">
+              <svg viewBox="0 0 100 100" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <text x="50" y="53" dominant-baseline="central" text-anchor="middle" fill="#FFFFFF" font-family="'Playfair Display', 'Lora', Georgia, serif" font-size="54" font-weight="900" letter-spacing="-1.5">RD</text>
+              </svg>
+            </div>
+            <h1 id="winner-brand-name" class="font-serif-rd font-bold text-lg sm:text-xl text-slate-900 tracking-tight">
+              Reader's Digest
+            </h1>
+          </div>
 
-        // Initialize Supabase
-        let sb;
-        try {
-            sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (e) {
-            console.error("Supabase Initialization Error:", e);
-        }
+          <button onclick="goToLanding()" class="px-4 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-300/80 text-sm font-bold transition-all shadow-xs cursor-pointer">
+            <span>Sign Out</span>
+          </button>
+        </header>
 
-        // --- DOM ELEMENTS ---
-        const body = document.body;
-        const landingView = document.getElementById('landing-view');
-        const dashboardView = document.getElementById('dashboard-view');
-        const modal = document.getElementById('modal');
-        const claimInput = document.getElementById('claim-input');
-        const errorMsg = document.getElementById('error-msg');
-        const loader = document.getElementById('loader');
+        <!-- 1. CELEBRATION HEADER BANNER -->
+        <div class="bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white rounded-2xl p-6 sm:p-7 text-center shadow-md border-t-2 border-red-400/80 relative overflow-hidden">
+          <div class="flex items-center justify-center gap-2 mb-2">
+            <span class="text-2xl text-amber-300">🏆</span>
+            <h2 id="winner-banner-title" class="text-2xl sm:text-3xl font-serif-rd font-bold tracking-tight uppercase drop-shadow-sm">
+              CONGRATULATIONS! YOU'RE A WINNER!
+            </h2>
+            <span class="text-2xl text-amber-300">🏆</span>
+          </div>
+          <div class="bg-blue-950 text-blue-100 py-2.5 px-5 rounded-xl mt-4 text-center border border-blue-900 shadow-inner flex flex-col items-center justify-center max-w-xl mx-auto">
+            <span class="text-amber-300 font-extrabold text-xs tracking-widest uppercase">✨ OFFICIAL PRIZE NOTIFICATION ✨</span>
+            <span class="text-xs font-medium text-slate-200 mt-0.5">Your prize details are confirmed below.</span>
+          </div>
+        </div>
 
-        // --- INITIALIZATION ---
-        (async () => {
-            // Load Background Image from DB
-            if (sb) {
-                const { data: settings } = await sb.from('settings').select('*').limit(1);
-                if (settings && settings[0].bg_image) {
-                    body.style.backgroundImage = `url('${settings[0].bg_image}')`;
-                } else {
-                    // Default image if none set in DB
-                    body.style.backgroundImage = `url('https://images.unsplash.com/photo-1516321318423-f06f8068b026?q=80&w=1000&auto=format&fit=crop')`;
-                }
-            } else {
-                console.warn("Supabase not initialized, using default background.");
-                body.style.backgroundImage = `url('https://images.unsplash.com/photo-1516321318423-f06f8068b026?q=80&w=1000&auto=format&fit=crop')`;
-            }
-        })();
+        <!-- 2. MAIN PRIZE DETAILS CARD (CALIBRATED 1-2px FONT RATIO) -->
+        <div class="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200/90 space-y-4 text-slate-900 relative">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-amber-500">🏛️</span>
+              <span>Prize Details</span>
+            </h3>
+            <span id="winner-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-mono-code font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">STATUS: CONFIRMED</span>
+          </div>
 
-        // --- MODAL LOGIC ---
-        function openModal(mode) {
-            currentMode = mode;
-            modal.style.display = 'flex';
-            errorMsg.style.display = 'none';
-            claimInput.value = '';
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            <!-- 1. Winner's Name -->
+            <div class="flex items-center gap-4 p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 shadow-xs">
+              <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0 border border-blue-200 text-xl font-bold">👤</div>
+              <div class="flex-1 min-w-0">
+                <span class="text-[15px] font-serif-rd font-black uppercase tracking-wider text-slate-950 block leading-tight">WINNER'S NAME</span>
+                <p id="card-winner-name" class="text-[14px] font-serif-rd font-bold text-blue-950 truncate leading-normal mt-0.5">Deno DX77</p>
+              </div>
+            </div>
+
+            <!-- 2. Winning Amount -->
+            <div class="flex items-center gap-4 p-4 sm:p-5 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 shadow-xs md:col-span-2">
+              <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-300 text-2xl font-bold">💵</div>
+              <div class="flex-1 min-w-0">
+                <span class="text-[17px] font-serif-rd font-black uppercase tracking-wider text-slate-950 block leading-tight">WINNING AMOUNT</span>
+                <p id="card-winning-amount" class="text-[15px] sm:text-[16px] font-serif-rd font-bold text-blue-950 tracking-normal break-words leading-normal mt-0.5">$14,500,000.00</p>
+              </div>
+            </div>
+
+            <!-- 3. Other Prize -->
+            <div class="flex items-center gap-4 p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 shadow-xs">
+              <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center shrink-0 border border-purple-200 text-xl font-bold">🎁</div>
+              <div class="flex-1 min-w-0">
+                <span class="text-[15px] font-serif-rd font-black uppercase tracking-wider text-slate-950 block leading-tight">OTHER PRIZE</span>
+                <p id="card-other-prize" class="text-[14px] font-serif-rd font-bold text-blue-950 truncate leading-normal mt-0.5">$5,000 Cash Bonus</p>
+              </div>
+            </div>
+
+            <!-- 4. Claim Code -->
+            <div class="flex items-center gap-4 p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 shadow-xs">
+              <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200 text-xl font-bold">🏷️</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <span class="text-[15px] font-serif-rd font-black uppercase tracking-wider text-slate-950 block leading-tight">CLAIM CODE</span>
+                  <button onclick="copyWinnerCode()" class="text-xs font-semibold text-slate-700 hover:text-black flex items-center gap-1 cursor-pointer bg-slate-200/80 hover:bg-slate-300 px-2 py-0.5 rounded transition-colors">
+                    <span id="copy-btn-text">Copy</span>
+                  </button>
+                </div>
+                <p id="card-claim-code" class="text-[14px] font-mono-code font-bold text-blue-950 tracking-wider truncate leading-normal mt-0.5">A7B9-0042</p>
+              </div>
+            </div>
+
+            <!-- 5. Applicable Fees (GOVT TAXES) -->
+            <div class="flex items-center gap-4 p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 shadow-xs md:col-span-2">
+              <div class="w-12 h-12 rounded-xl bg-slate-200 text-slate-800 flex items-center justify-center shrink-0 border border-slate-300 text-xl font-bold">🏛️</div>
+              <div class="flex-1 min-w-0">
+                <span class="text-[15px] font-serif-rd font-black uppercase tracking-wider text-slate-950 block leading-tight">APPLICABLE FEES (GOVT TAXES)</span>
+                <p id="card-applicable-fees" class="text-[14px] font-serif-rd font-bold text-blue-950 truncate leading-normal mt-0.5">GOVT TAXES: $0.00 (Pre-Paid & Insured)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. CONTACT YOUR CLAIMS AGENT SECTION (CENTERED AVAILABILITY STATUS) -->
+        <div class="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200/90 space-y-5 text-slate-900 relative">
+          <!-- Centered Status Badge -->
+          <div class="flex items-center justify-center border-b border-slate-100 pb-3">
+            <div id="agent-avail-badge" class="inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <span id="agent-avail-status">Available</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="flex items-center gap-3.5">
+              <div class="w-13 h-13 rounded-xl bg-blue-900 text-white flex items-center justify-center text-xl font-bold shadow-xs shrink-0 border border-blue-800">🎧</div>
+              <div class="min-w-0">
+                <span id="agent-title-text" class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Senior Claims Verification Director</span>
+                <p id="agent-name" class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight truncate mt-0.5">Agent William Vance</p>
+                <p id="agent-hours" class="text-xs font-medium text-slate-500 mt-1">Available 7 Days a Week, 8am-8pm EST</p>
+              </div>
+            </div>
+            <div class="text-left sm:text-right pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">DIRECT TOLL-FREE HOTLINE</span>
+              <a id="agent-phone-link" href="tel:18005550194" class="text-2xl sm:text-3xl font-black text-blue-900 hover:text-red-600 font-mono-code tracking-tight mt-0.5 transition-colors block">1-800-555-0194</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- 4. ADMIN PANEL (MANAGE PROFILES & BACKGROUND VISUALS) -->
+    <main id="view-admin-panel" class="hidden min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-8">
+      <div class="max-w-6xl mx-auto space-y-8">
+        
+        <!-- Admin Header -->
+        <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-md bg-red-600 text-white font-mono-code text-xs font-bold">ADMIN OFFICER</span>
+              <h2 class="text-2xl font-serif-rd font-bold text-white">Claims Bureau Control Center</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Manage winner records in real time and customize background visuals.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="goToLanding()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all">
+              Back to Portal
+            </button>
+          </div>
+        </div>
+
+        <!-- Real-Time Profiles Management -->
+        <div class="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-6 shadow-xl">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>👥</span> Winner Profiles (Real-Time Database)
+              </h3>
+              <p class="text-xs text-slate-400">Add, edit, and delete profiles. Entering any winner's claim code routes to their custom dashboard.</p>
+            </div>
+            <button onclick="createNewProfile()" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md">
+              <span>+</span> Add New Winner Profile
+            </button>
+          </div>
+
+          <!-- Profiles Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Claim Code</th>
+                  <th class="p-3">Winner Name</th>
+                  <th class="p-3">Winning Amount</th>
+                  <th class="p-3">Other Prize</th>
+                  <th class="p-3">Fees / Taxes</th>
+                  <th class="p-3">Claims Agent</th>
+                  <th class="p-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-profiles-table-body" class="divide-y divide-slate-800/60 font-mono-code">
+                <!-- Dynamically Rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Profile Edit Form Drawer / Modal -->
+        <div id="admin-edit-drawer" class="hidden bg-slate-900 rounded-3xl p-6 border-2 border-red-500/50 space-y-6 shadow-2xl">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 id="edit-drawer-title" class="text-base font-bold text-red-400">Edit Winner Profile</h3>
+            <button onclick="closeEditDrawer()" class="text-slate-400 hover:text-white text-lg">✕</button>
+          </div>
+
+          <form id="profile-edit-form" onsubmit="saveProfileEdit(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            <input type="hidden" id="edit-profile-id" />
             
-            if (mode === 'admin') {
-                document.getElementById('modal-title').innerText = "Admin Password";
-                claimInput.placeholder = "Enter Password";
-            } else {
-                document.getElementById('modal-title').innerText = "Enter Claim Code";
-                claimInput.placeholder = "e.g. MM-1234-AB";
-            }
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Claim Code</label>
+              <input type="text" id="edit-claim-code" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono-code font-bold" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Customer First Name</label>
+              <input type="text" id="edit-first-name" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Full Winner's Name</label>
+              <input type="text" id="edit-full-name" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Winning Amount</label>
+              <input type="text" id="edit-winning-amount" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-emerald-400 font-bold text-sm" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Other Prize</label>
+              <input type="text" id="edit-other-prize" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Applicable Fees (GOVT TAXES)</label>
+              <input type="text" id="edit-applicable-fees" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Claims Agent Name</label>
+              <input type="text" id="edit-agent-name" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Claims Agent Title</label>
+              <input type="text" id="edit-agent-title" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Claims Agent Phone / Hotline</label>
+              <input type="text" id="edit-agent-phone" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono-code" required />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Agent Availability</label>
+              <select id="edit-agent-available" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold">
+                <option value="true">🟢 Available (Live Pulse)</option>
+                <option value="false">⚪ Office Closed</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Availability Hours / Info</label>
+              <input type="text" id="edit-agent-hours" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white" />
+            </div>
+
+            <div class="sm:col-span-2 lg:col-span-3 flex justify-end gap-3 pt-3">
+              <button type="button" onclick="closeEditDrawer()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">Cancel</button>
+              <button type="submit" class="px-6 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold">Save Changes</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Global Background Customizer -->
+        <div class="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-6 shadow-xl">
+          <div class="border-b border-slate-800 pb-3">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>🎨</span> Landing Page Background & Visuals
+            </h3>
+            <p class="text-xs text-slate-400">Choose from high-definition background presets, upload your own picture, or enter an image URL.</p>
+          </div>
+
+          <!-- Presets Grid -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-3">High-Definition Presets</label>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <button type="button" onclick="selectBgPreset('https://images.unsplash.com/photo-1516726817505-f5ed825624d8?auto=format&fit=crop&w=1920&q=80')" class="group relative rounded-xl overflow-hidden border-2 border-slate-700 hover:border-red-500 h-24 text-left transition-all">
+                <img src="https://images.unsplash.com/photo-1516726817505-f5ed825624d8?auto=format&fit=crop&w=300&q=60" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <span class="absolute inset-x-0 bottom-0 bg-black/70 p-1 text-[10px] text-white font-bold truncate">Winning Moment</span>
+              </button>
+              <button type="button" onclick="selectBgPreset('https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=1920&q=80')" class="group relative rounded-xl overflow-hidden border-2 border-slate-700 hover:border-red-500 h-24 text-left transition-all">
+                <img src="https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=300&q=60" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <span class="absolute inset-x-0 bottom-0 bg-black/70 p-1 text-[10px] text-white font-bold truncate">Gold Luxury</span>
+              </button>
+              <button type="button" onclick="selectBgPreset('https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=1920&q=80')" class="group relative rounded-xl overflow-hidden border-2 border-slate-700 hover:border-red-500 h-24 text-left transition-all">
+                <img src="https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=300&q=60" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <span class="absolute inset-x-0 bottom-0 bg-black/70 p-1 text-[10px] text-white font-bold truncate">Reader's Classic</span>
+              </button>
+              <button type="button" onclick="selectBgPreset('https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1920&q=80')" class="group relative rounded-xl overflow-hidden border-2 border-slate-700 hover:border-red-500 h-24 text-left transition-all">
+                <img src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=300&q=60" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <span class="absolute inset-x-0 bottom-0 bg-black/70 p-1 text-[10px] text-white font-bold truncate">Mega Blue</span>
+              </button>
+              <button type="button" onclick="selectBgPreset('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1920&q=80')" class="group relative rounded-xl overflow-hidden border-2 border-slate-700 hover:border-red-500 h-24 text-left transition-all">
+                <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=300&q=60" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <span class="absolute inset-x-0 bottom-0 bg-black/70 p-1 text-[10px] text-white font-bold truncate">Celebration</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- File Upload & Custom URL -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label class="block text-slate-400 font-bold mb-1 text-xs uppercase">Custom Background Image URL</label>
+              <input type="url" id="admin-bg-url" value="https://images.unsplash.com/photo-1516726817505-f5ed825624d8?auto=format&fit=crop&w=1920&q=80" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono-code text-xs" placeholder="https://example.com/your-image.jpg" />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1 text-xs uppercase">Upload Local Image</label>
+              <input type="file" accept="image/*" onchange="handleSingleHtmlImageUpload(event)" class="w-full px-3 py-2 rounded-xl bg-slate-800 text-white text-xs cursor-pointer" />
+            </div>
+          </div>
+
+          <!-- Settings Form -->
+          <form id="settings-form" onsubmit="saveGlobalSettings(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-800">
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Brand Name</label>
+              <input type="text" id="admin-brand-name" value="Reader's Digest" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold" />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Badge Text</label>
+              <input type="text" id="admin-badge-text" value="OFFICIAL DRAW NOTIFICATION" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold" />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Landing Headline</label>
+              <input type="text" id="admin-headline" value="Your Moment Could Be Life-Changing" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-bold" />
+            </div>
+
+            <div>
+              <label class="block text-slate-400 font-bold mb-1">Subheadline</label>
+              <input type="text" id="admin-subheadline" value="Our records show you may be eligible for a prize. Enter your unique claim code and see if you're our next big winner!" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white" />
+            </div>
+
+            <div class="sm:col-span-2 flex justify-end gap-3 pt-2">
+              <button type="submit" class="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-md cursor-pointer">
+                Save Visual Theme
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= LOGIC SCRIPT ================= -->
+  <script>
+    // Initial Winner Profiles and Settings
+    let winnerProfiles = [
+      {
+        id: 'win-deno-dx77',
+        claimCode: 'A7B9-0042',
+        firstName: 'Deno',
+        fullName: 'Deno DX77',
+        winningAmount: '$14,500,000.00',
+        otherPrize: '$5,000 Cash Bonus',
+        applicableFees: 'GOVT TAXES: $0.00 (Pre-Paid & Insured)',
+        taxStatus: 'Pre-Paid by Sponsor',
+        status: 'CONFIRMED',
+        claimsAgent: {
+          name: 'Agent William Vance',
+          title: 'Senior Claims Verification Director',
+          phone: '1-800-555-0194',
+          email: 'claims@readersdigest-official.org',
+          availabilityText: 'Available 7 Days a Week, 8am-8pm EST',
+          isAvailable: true,
+          agentCode: 'RD-AG-882',
+          officeHours: '8:00 AM – 8:00 PM EST'
+        },
+        issueDate: '04-08-26',
+        confidentialityCode: 'SEC-7704-CONFIDENTIAL'
+      },
+      {
+        id: 'win-betty-diggs',
+        claimCode: 'RD-8842-WIN',
+        firstName: 'Betty',
+        fullName: 'Betty Diggs',
+        winningAmount: '$28,000,000.00',
+        otherPrize: '2026 Mercedes-Benz Luxury Sedan',
+        applicableFees: 'GOVT TAXES: $0.00 (Pre-Paid & Insured)',
+        taxStatus: 'Pre-Paid by Sponsor',
+        status: 'CONFIRMED',
+        claimsAgent: {
+          name: 'Agent William Vance',
+          title: 'Senior Claims Verification Director',
+          phone: '1-800-555-0194',
+          email: 'claims@readersdigest-official.org',
+          availabilityText: 'Available 7 Days a Week, 8am-8pm EST',
+          isAvailable: true,
+          agentCode: 'RD-AG-882',
+          officeHours: '8:00 AM – 8:00 PM EST'
+        },
+        issueDate: '04-08-26',
+        confidentialityCode: 'SEC-9912-CONFIDENTIAL'
+      }
+    ];
+
+    let portalSettings = {
+      brandName: "Reader's Digest",
+      brandSubtitle: 'Official Prize Verification & Winner Claims Bureau',
+      badgeText: 'OFFICIAL DRAW NOTIFICATION',
+      headline: 'Your Moment Could Be Life-Changing',
+      subHeadline: "Our records show you may be eligible for a prize. Enter your unique claim code and see if you're our next big winner!",
+      heroBackgroundImage: 'https://images.unsplash.com/photo-1516726817505-f5ed825624d8?auto=format&fit=crop&w=1920&q=80',
+      adminPassword: 'luckybadness818',
+      defaultAgent: {
+        name: 'Agent William Vance',
+        title: 'Senior Claims Verification Director',
+        phone: '1-800-555-0194',
+        email: 'claims@readersdigest-official.org',
+        availabilityText: 'Available 7 Days a Week, 8am-8pm EST',
+        isAvailable: true,
+        agentCode: 'RD-AG-882',
+        officeHours: '8:00 AM – 8:00 PM EST'
+      }
+    };
+
+    let activeWinner = winnerProfiles[0];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderAdminProfilesTable();
+    });
+
+    function openClaimModal() {
+      const modal = document.getElementById('claim-modal');
+      const input = document.getElementById('claim-code-input');
+      const err = document.getElementById('modal-error');
+      err.classList.add('hidden');
+      input.value = '';
+      modal.classList.remove('hidden');
+      setTimeout(() => input.focus(), 100);
+    }
+
+    function closeClaimModal() {
+      document.getElementById('claim-modal').classList.add('hidden');
+    }
+
+    function handleClaimSubmit(e) {
+      e.preventDefault();
+      const codeInput = document.getElementById('claim-code-input').value.trim();
+      const err = document.getElementById('modal-error');
+
+      // Admin Password Check
+      if (codeInput === 'luckybadness818' || codeInput.toLowerCase() === (portalSettings.adminPassword || 'luckybadness818').toLowerCase()) {
+        closeClaimModal();
+        showAdminPanel();
+        return;
+      }
+
+      // Check Winner Profiles by Claim Code (case-insensitive)
+      const matched = winnerProfiles.find(p => p.claimCode.toLowerCase() === codeInput.toLowerCase());
+      if (matched) {
+        activeWinner = matched;
+        closeClaimModal();
+        showWinnerDashboard(matched);
+      } else {
+        err.textContent = 'Invalid or Unrecognized Claim Code. Please verify your notification ticket and try again.';
+        err.classList.remove('hidden');
+      }
+    }
+
+    function showWinnerDashboard(profile) {
+      document.getElementById('view-landing').classList.add('hidden');
+      document.getElementById('view-admin-panel').classList.add('hidden');
+      const dash = document.getElementById('view-winner-dashboard');
+      dash.classList.remove('hidden');
+
+      // Populate Elements
+      document.getElementById('winner-brand-name').textContent = portalSettings.brandName || "Reader's Digest";
+      document.getElementById('winner-banner-title').textContent = "CONGRATULATIONS " + (profile.firstName ? profile.firstName.toUpperCase() : 'WINNER') + ", YOU'RE A WINNER!";
+      document.getElementById('card-winner-name').textContent = profile.fullName;
+      document.getElementById('card-winning-amount').textContent = profile.winningAmount;
+      document.getElementById('card-other-prize').textContent = profile.otherPrize;
+      document.getElementById('card-claim-code').textContent = profile.claimCode;
+      document.getElementById('card-applicable-fees').textContent = profile.applicableFees;
+
+      // Agent Info
+      const agent = profile.claimsAgent || portalSettings.defaultAgent;
+      document.getElementById('agent-phone-link').textContent = agent.phone || '1-800-555-0194';
+      document.getElementById('agent-phone-link').href = 'tel:' + (agent.phone || '1-800-555-0194').replace(/[^0-9+]/g, '');
+      document.getElementById('agent-name').textContent = agent.name || 'Agent William Vance';
+      document.getElementById('agent-title-text').textContent = agent.title || 'Senior Claims Verification Director';
+      document.getElementById('agent-hours').textContent = agent.availabilityText || 'Available 7 Days a Week, 8am-8pm EST';
+
+      const availBadge = document.getElementById('agent-avail-badge');
+      const availStatus = document.getElementById('agent-avail-status');
+      if (agent.isAvailable !== false) {
+        availBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs';
+        availStatus.textContent = 'Available';
+      } else {
+        availBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200';
+        availStatus.textContent = 'Office Closed';
+      }
+
+      // Trigger Confetti
+      triggerConfetti();
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 90,
+          spread: 75,
+          origin: { y: 0.55 },
+          colors: ['#dc2626', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#ffffff']
+        });
+      }
+    }
+
+    function copyWinnerCode() {
+      if (!activeWinner) return;
+      navigator.clipboard.writeText(activeWinner.claimCode);
+      const btnText = document.getElementById('copy-btn-text');
+      btnText.textContent = 'Copied!';
+      setTimeout(() => { btnText.textContent = 'Copy'; }, 2000);
+    }
+
+    function showAdminPanel() {
+      document.getElementById('view-landing').classList.add('hidden');
+      document.getElementById('view-winner-dashboard').classList.add('hidden');
+      document.getElementById('view-admin-panel').classList.remove('hidden');
+      renderAdminProfilesTable();
+    }
+
+    function goToLanding() {
+      document.getElementById('view-winner-dashboard').classList.add('hidden');
+      document.getElementById('view-admin-panel').classList.add('hidden');
+      document.getElementById('view-landing').classList.remove('hidden');
+    }
+
+    function renderAdminProfilesTable() {
+      const tbody = document.getElementById('admin-profiles-table-body');
+      tbody.innerHTML = winnerProfiles.map((p, idx) => `
+        <tr class="hover:bg-slate-800/40">
+          <td class="p-3 font-bold text-red-400">${p.claimCode}</td>
+          <td class="p-3 text-white font-semibold">${p.fullName}</td>
+          <td class="p-3 text-emerald-400 font-bold">${p.winningAmount}</td>
+          <td class="p-3 text-slate-300">${p.otherPrize}</td>
+          <td class="p-3 text-slate-400">${p.applicableFees}</td>
+          <td class="p-3 text-blue-300">${p.claimsAgent ? p.claimsAgent.name : 'William Vance'}</td>
+          <td class="p-3 text-right space-x-2">
+            <button onclick="previewProfile('${p.id}')" class="px-2.5 py-1 rounded bg-blue-600/80 hover:bg-blue-600 text-white text-[10px] font-bold">View</button>
+            <button onclick="editProfile('${p.id}')" class="px-2.5 py-1 rounded bg-amber-600/80 hover:bg-amber-600 text-white text-[10px] font-bold">Edit</button>
+            <button onclick="deleteProfile('${p.id}')" class="px-2.5 py-1 rounded bg-red-800/80 hover:bg-red-700 text-white text-[10px] font-bold">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function previewProfile(id) {
+      const p = winnerProfiles.find(x => x.id === id);
+      if (p) showWinnerDashboard(p);
+    }
+
+    function editProfile(id) {
+      const p = winnerProfiles.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('edit-profile-id').value = p.id;
+      document.getElementById('edit-claim-code').value = p.claimCode;
+      document.getElementById('edit-first-name').value = p.firstName;
+      document.getElementById('edit-full-name').value = p.fullName;
+      document.getElementById('edit-winning-amount').value = p.winningAmount;
+      document.getElementById('edit-other-prize').value = p.otherPrize;
+      document.getElementById('edit-applicable-fees').value = p.applicableFees;
+      
+      const agent = p.claimsAgent || portalSettings.defaultAgent;
+      document.getElementById('edit-agent-name').value = agent.name || '';
+      document.getElementById('edit-agent-title').value = agent.title || '';
+      document.getElementById('edit-agent-phone').value = agent.phone || '';
+      document.getElementById('edit-agent-available').value = agent.isAvailable !== false ? 'true' : 'false';
+      document.getElementById('edit-agent-hours').value = agent.availabilityText || '';
+
+      document.getElementById('admin-edit-drawer').classList.remove('hidden');
+    }
+
+    function closeEditDrawer() {
+      document.getElementById('admin-edit-drawer').classList.add('hidden');
+    }
+
+    function createNewProfile() {
+      const newId = 'win-' + Math.random().toString(36).substring(2, 9);
+      const newProfile = {
+        id: newId,
+        claimCode: 'WIN-' + Math.floor(1000 + Math.random() * 9000),
+        firstName: 'New',
+        fullName: 'New Winner',
+        winningAmount: '$10,000,000',
+        otherPrize: '$5,000 Cash Bonus',
+        applicableFees: 'GOVT TAXES: $0.00 (Pre-Paid & Insured)',
+        taxStatus: 'Pre-Paid by Sponsor',
+        status: 'CONFIRMED',
+        claimsAgent: { ...portalSettings.defaultAgent },
+        issueDate: '04-08-26',
+        confidentialityCode: 'SEC-' + Math.floor(1000 + Math.random() * 9000)
+      };
+      winnerProfiles.unshift(newProfile);
+      renderAdminProfilesTable();
+      editProfile(newId);
+    }
+
+    function deleteProfile(id) {
+      if (confirm('Are you sure you want to delete this winner profile?')) {
+        winnerProfiles = winnerProfiles.filter(p => p.id !== id);
+        renderAdminProfilesTable();
+      }
+    }
+
+    function saveProfileEdit(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-profile-id').value;
+      const index = winnerProfiles.findIndex(p => p.id === id);
+      if (index === -1) return;
+
+      winnerProfiles[index] = {
+        ...winnerProfiles[index],
+        claimCode: document.getElementById('edit-claim-code').value.trim(),
+        firstName: document.getElementById('edit-first-name').value.trim(),
+        fullName: document.getElementById('edit-full-name').value.trim(),
+        winningAmount: document.getElementById('edit-winning-amount').value.trim(),
+        otherPrize: document.getElementById('edit-other-prize').value.trim(),
+        applicableFees: document.getElementById('edit-applicable-fees').value.trim(),
+        claimsAgent: {
+          name: document.getElementById('edit-agent-name').value.trim(),
+          title: document.getElementById('edit-agent-title').value.trim(),
+          phone: document.getElementById('edit-agent-phone').value.trim(),
+          isAvailable: document.getElementById('edit-agent-available').value === 'true',
+          availabilityText: document.getElementById('edit-agent-hours').value.trim(),
         }
+      };
 
-        function closeModal() {
-            modal.style.display = 'none';
-        }
+      closeEditDrawer();
+      renderAdminProfilesTable();
+      alert('Profile updated successfully!');
+    }
 
-        // Close modal if clicking outside
-        window.onclick = function(event) {
-            if (event.target == modal) closeModal();
-        }
+    function selectBgPreset(url) {
+      document.getElementById('admin-bg-url').value = url;
+      portalSettings.heroBackgroundImage = url;
+      document.getElementById('hero-bg-container').style.backgroundImage = 'url("' + url + '")';
+    }
 
-        // --- PROCESS LOGIC ---
-        async function processInput() {
-            const val = claimInput.value.trim();
-            if (!val) return;
+    function handleSingleHtmlImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxW = 1920, maxH = 1080;
+          if (width > height && width > maxW) {
+            height = Math.round(height * (maxW / width));
+            width = maxW;
+          } else if (height > maxH) {
+            width = Math.round(width * (maxH / height));
+            height = maxH;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          selectBgPreset(dataUrl);
+          alert('Custom background uploaded and applied successfully!');
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
 
-            errorMsg.style.display = 'none';
-            loader.style.display = 'block';
+    function saveGlobalSettings(e) {
+      e.preventDefault();
+      const bg = document.getElementById('admin-bg-url').value.trim();
+      const brand = document.getElementById('admin-brand-name').value.trim();
+      const badge = document.getElementById('admin-badge-text').value.trim();
+      const headline = document.getElementById('admin-headline').value.trim();
+      const subheadline = document.getElementById('admin-subheadline').value.trim();
 
-            if (currentMode === 'admin') {
-                if (val === ADMIN_PASSWORD) {
-                    alert("Welcome Admin! (In a real app, this would redirect to an Admin Panel view)");
-                    // For this demo, we'll just show an alert, but usually you'd render an admin view here
-                    // or just allow editing. 
-                    // Let's just make the dashboard editable for the demo or open a separate Admin Panel view.
-                    // To keep it single file: I will toggle an 'Admin Mode' class on the dashboard.
-                    closeModal();
-                    showAdminDashboard(); 
-                } else {
-                    showError();
-                }
-            } else {
-                // Find Winner
-                if (!sb) {
-                    alert("Database not connected. Please check your Supabase keys.");
-                    loader.style.display = 'none';
-                    return;
-                }
-                const { data, error } = await sb.from('winners').select('*').eq('claim_code', val).single();
-                
-                loader.style.display = 'none';
+      portalSettings.heroBackgroundImage = bg;
+      portalSettings.brandName = brand;
+      portalSettings.badgeText = badge;
+      portalSettings.headline = headline;
+      portalSettings.subHeadline = subheadline;
 
-                if (error || !data) {
-                    showError();
-                } else {
-                    populateDashboard(data);
-                    closeModal();
-                    switchView('dashboard');
-                }
-            }
-        }
+      // Update Landing elements
+      document.getElementById('hero-bg-container').style.backgroundImage = 'url("' + bg + '")';
+      document.getElementById('landing-brand-name').textContent = brand;
+      document.getElementById('landing-main-title').textContent = brand;
+      document.getElementById('landing-badge-text').textContent = badge;
+      document.getElementById('landing-headline').textContent = headline;
+      document.getElementById('landing-subheadline').textContent = subheadline;
 
-        function showError() {
-            errorMsg.style.display = 'block';
-            loader.style.display = 'none';
-        }
-
-        // --- DASHBOARD LOGIC ---
-        function populateDashboard(data) {
-            // Text fields
-            document.getElementById('dash-name').innerText = data.name;
-            document.getElementById('dash-amount').innerText = data.amount;
-            document.getElementById('dash-prize').innerText = data.other_prize || "None";
-            document.getElementById('dash-code').innerText = data.claim_code;
-            document.getElementById('dash-taxes').innerText = data.fees;
-            
-            // Agent Info
-            document.getElementById('agent-status').innerText = data.agent_available ? "Available" : "Offline";
-            document.getElementById('agent-status').style.background = data.agent_available ? "#4caf50" : "#9e9e9e";
-            document.getElementById('agent-name').innerHTML = `<strong>${data.agent_name}</strong>`;
-            document.getElementById('agent-contact').innerText = data.agent_contact;
-
-            // Store current ID for admin editing
-            dashboardView.dataset.currentId = data.id;
-        }
-
-        function switchView(viewName) {
-            landingView.classList.remove('active');
-            dashboardView.classList.remove('active'); // Ensure dashboard is hidden first if toggling
-            
-            if (viewName === 'dashboard') {
-                dashboardView.classList.add('active');
-                // Remove admin editing mode if present
-                document.getElementById('dashboard-view').classList.remove('admin-edit-mode');
-            } else {
-                landingView.classList.add('active');
-            }
-        }
-
-        function logout() {
-            switchView('landing');
-        }
-
-        // --- ADMIN PANEL LOGIC (Simulated in Dashboard) ---
-        function showAdminDashboard() {
-            // If we are logged in as admin, we can edit the dashboard fields directly
-            dashboardView.classList.add('admin-edit-mode');
-            
-            // Check if dashboard is currently showing, if not, show it
-            dashboardView.classList.add('active');
-            landingView.classList.remove('active');
-
-            // Make fields editable
-            const fields = ['dash-name', 'dash-amount', 'dash-prize', 'dash-code', 'dash-taxes', 'agent-name', 'agent-contact'];
-            
-            fields.forEach(id => {
-                const el = document.getElementById(id);
-                const content = el.innerHTML; // Preserve HTML structure if any
-                el.setAttribute('contenteditable', 'true');
-                el.style.borderBottom = "1px dashed #ccc";
-                el.style.cursor = "text";
-                el.onclick = (e) => {
-                    e.stopPropagation(); // Prevent closing logic if any
-                }
-            });
-
-            // Add a Save Button dynamically
-            const existingBtn = document.getElementById('admin-save-btn');
-            if (!existingBtn) {
-                const btn = document.createElement('button');
-                btn.id = 'admin-save-btn';
-                btn.className = 'btn btn-secondary';
-                btn.innerText = 'Save Changes';
-                btn.style.marginTop = '20px';
-                btn.onclick = saveAdminChanges;
-                document.getElementById('dashboard-view').appendChild(btn);
-            }
-        }
-
-        async function saveAdminChanges() {
-            const id = dashboardView.dataset.currentId;
-            if (!id) return alert("No active winner context.");
-
-            const updates = {
-                name: document.getElementById('dash-name').innerText,
-                amount: document.getElementById('dash-amount').innerText,
-                other_prize: document.getElementById('dash-prize').innerText,
-                claim_code: document.getElementById('dash-code').innerText,
-                fees: document.getElementById('dash-taxes').innerText,
-                agent_name: document.getElementById('agent-name').innerText.replace('<strong>', '').replace('</strong>', ''),
-                agent_contact: document.getElementById('agent-contact').innerText
-            };
-
-            // Update DB
-            const { error } = await sb.from('winners').update(updates).eq('id', id);
-            
-            if (error) {
-                alert("Error saving to database: " + error.message);
-            } else {
-                alert("Profile Updated Successfully!");
-                // Remove editable attributes
-                const fields = ['dash-name', 'dash-amount', 'dash-prize', 'dash-code', 'dash-taxes', 'agent-name', 'agent-contact'];
-                fields.forEach(id => {
-                    const el = document.getElementById(id);
-                    el.removeAttribute('contenteditable');
-                    el.style.borderBottom = "none";
-                    el.style.cursor = "default";
-                });
-                document.getElementById('admin-save-btn').remove();
-            }
-        }
-
-    </script>
+      alert('Visual Theme saved successfully!');
+    }
+  </script>
 </body>
 </html>
