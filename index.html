@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEGA MILLIONS - Official Prize Notification</title>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #d32f2f; /* Red */
+            --secondary: #1976d2; /* Blue */
+            --accent: #ffb300; /* Gold */
+            --text-dark: #333;
+            --text-light: #fff;
+            --glass: rgba(255, 255, 255, 0.95);
+            --admin-bg: #f4f6f8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            min-height: 100vh;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 0.5s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Container Card */
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--glass);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        /* Header & Logos */
+        .logo-area { margin-bottom: 20px; }
+        .mega-logo {
+            font-size: 2rem;
+            font-weight: 900;
+            background: -webkit-linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .badge-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            font-size: 0.8rem;
+            color: #555;
+        }
+        .badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #eee;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+        .badge i { color: var(--secondary); }
+
+        /* Typography */
+        h1 { font-size: 1.5rem; margin-bottom: 10px; color: var(--text-dark); }
+        .highlight { color: #ff9800; font-weight: bold; }
+        p.sub-text { color: #666; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5; }
+
+        /* Buttons */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary), #b71c1c);
+            color: white;
+            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+        }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:active { transform: scale(0.98); }
+
+        /* Inputs */
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+        .input-group input, .input-group textarea, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        .input-group textarea { resize: vertical; min-height: 80px; }
+
+        /* Dashboard Styles */
+        .dashboard-view { display: none; text-align: left; }
+        .dashboard-view.active { display: block; }
+        .dashboard-header { text-align: center; margin-bottom: 20px; }
+        .win-amount {
+            font-size: 2.5rem;
+            color: var(--secondary);
+            font-weight: 800;
+            text-align: center;
+            margin: 15px 0;
+            text-shadow: 1px 1px 0px #ddd;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95rem;
+        }
+        .detail-label { font-weight: 600; color: #555; }
+        
+        .agent-box {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .status-badge {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-bottom: 5px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 100; 
+            left: 0; top: 0; 
+            width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.6); 
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .close-modal { float: right; font-size: 20px; cursor: pointer; color: #aaa; }
+
+        /* Loader */
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; margin: 10px auto; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* View Toggles */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* ADMIN PANEL STYLES */
+        #admin-view {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: var(--admin-bg);
+            z-index: 200;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        #admin-view.active { display: block; }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+        }
+        .admin-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .admin-container { grid-template-columns: 1fr; }
+        }
+        .admin-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .admin-card h3 { margin-bottom: 15px; border-bottom: 2px solid var(--secondary); padding-bottom: 5px; display: inline-block; }
+        
+        .profile-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .profile-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .profile-item:hover { background: #f9f9f9; }
+        .profile-item.active { background: #e3f2fd; border-left: 4px solid var(--secondary); }
+        .profile-actions button { padding: 5px 10px; font-size: 0.8rem; margin-left: 5px; }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #28a745; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+    </style>
+</head>
+<body>
+
+    <!-- PUBLIC VIEW -->
+    <div class="container">
+        <!-- Header -->
+        <div class="logo-area">
+            <div class="mega-logo">MEGA MILLIONS</div>
+        </div>
+
+        <!-- Landing View -->
+        <div id="landing-view" class="view active">
+            <h1>OFFICIAL PRIZE NOTIFICATION</h1>
+            <h2>Your Moment Could Be <span class="highlight">Life-Changing</span></h2>
+            <p class="sub-text">Our records show you may be eligible for a prize. Enter your unique claim code to verify your status.</p>
+            
+            <button class="btn btn-primary" onclick="openModal('winner')">LET'S GO!</button>
+            <button class="btn btn-secondary" onclick="openModal('admin')">Admin Access</button>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="view dashboard-view">
+            <div class="dashboard-header">
+                <i class="fas fa-trophy" style="color: gold; font-size: 2rem;"></i>
+                <h2>Congratulations!</h2>
+                <p>You are the lucky winner</p>
+            </div>
+
+            <div class="win-amount" id="dash-amount">$14,500,000</div>
+
+            <div class="detail-row">
+                <span class="detail-label">Winner Name:</span>
+                <span id="dash-name" style="color: #333; font-weight:bold;">John Doe</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Other Prize:</span>
+                <span id="dash-prize">2024 Audi A5</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Claim Code:</span>
+                <span id="dash-code">MM-9928-XJ</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Applicable Fees (Taxes):</span>
+                <span id="dash-taxes" style="color: red;">$2,500.00</span>
+            </div>
+
+            <div class="agent-box">
+                <div class="status-badge" id="agent-status">Available</div>
+                <h4>Claims Agent</h4>
+                <p id="agent-name"><strong>Sarah Jenkins</strong></p>
+                <p id="agent-contact">+1 (555) 012-3456</p>
+            </div>
+
+            <br>
+            <button class="btn btn-secondary" onclick="logout()">Close</button>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3 id="modal-title" style="margin-bottom: 15px;">Enter Claim Code</h3>
+            <div class="input-group">
+                <input type="text" id="claim-input" placeholder="e.g. MM-1234-AB">
+            </div>
+            <div class="loader" id="loader"></div>
+            <button class="btn btn-primary" onclick="processInput()">Verify Code</button>
+            <p id="error-msg" style="color: red; margin-top: 10px; display: none;">Invalid Code or Password</p>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div id="admin-view">
+        <div class="admin-header">
+            <h2>Admin Control Panel</h2>
+            <button class="btn btn-secondary" style="width: auto;" onclick="logoutAdmin()">Exit Admin</button>
+        </div>
+
+        <div class="admin-container">
+            <!-- Left: Create/Edit Form -->
+            <div class="admin-card">
+                <h3><i class="fas fa-user-edit"></i> Winner Profile</h3>
+                <input type="hidden" id="edit-id">
+                <div class="input-group">
+                    <label>Winner Name</label>
+                    <input type="text" id="admin-name" placeholder="e.g. Jane Doe">
+                </div>
+                <div class="input-group">
+                    <label>Winning Amount</label>
+                    <input type="text" id="admin-amount" placeholder="e.g. $10,000,000">
+                </div>
+                <div class="input-group">
+                    <label>Other Prize</label>
+                    <input type="text" id="admin-prize" placeholder="e.g. 2024 Tesla Model 3">
+                </div>
+                <div class="input-group">
+                    <label>Claim Code</label>
+                    <input type="text" id="admin-code" placeholder="e.g. MM-1234-AB">
+                </div>
+                <div class="input-group">
+                    <label>Applicable Fees (Taxes)</label>
+                    <input type="text" id="admin-fees" placeholder="e.g. $1,500.00">
+                </div>
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+                <h3><i class="fas fa-headset"></i> Claims Agent</h3>
+                <div class="input-group">
+                    <label>Agent Name</label>
+                    <input type="text" id="admin-agent-name" placeholder="e.g. Mike Ross">
+                </div>
+                <div class="input-group">
+                    <label>Contact Info</label>
+                    <input type="text" id="admin-agent-contact" placeholder="e.g. +1 555-0000">
+                </div>
+                <div class="input-group">
+                    <label>Availability</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="admin-agent-avail" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+                <button class="btn btn-secondary" onclick="resetForm()">New Profile</button>
+            </div>
+
+            <!-- Right: Background & List -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="admin-card">
+                    <h3><i class="fas fa-image"></i> Background Image</h3>
+                    <div class="input-group">
+                        <label>Image URL</label>
+                        <input type="text" id="admin-bg-url" placeholder="https://...">
+                    </div>
+                    <button class="btn btn-success" onclick="updateBackground()">Update Background</button>
+                </div>
+
+                <div class="admin-card">
+                    <h3><i class="fas fa-list"></i> Existing Profiles</h3>
+                    <div class="profile-list" id="profile-list-container">
+                        <!-- List items populated by JS -->
+                        <div style="padding: 10px; text-align: center; color: #999;">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // REPLACE THESE WITH YOUR SUPABASE KEYS
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL'; 
+        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        
+        const ADMIN_PASSWORD = 'luckybadness818';
+        let currentMode = 'winner'; 
+
+        // Initialize Supabase
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- DOM ELEMENTS ---
+        const body = document.body;
+        const landingView = document.getElementById('landing-view');
+        const dashboardView = document.getElementById('dashboard-view');
+        const modal = document.getElementById('modal');
+        const claimInput = document.getElementById('claim-input');
+        const errorMsg = document.getElementById('error-msg');
+        const loader = document.getElementById('loader');
+        
+        // Admin Elements
+        const adminView = document.getElementById('admin-view');
+        const profileListContainer = document.getElementById('profile-list-container');
+
+        // --- INITIALIZATION ---
+        (async () => {
+            loadSettings();
+        })();
+
+        // --- PUBLIC FUNCTIONS ---
+        async function loadSettings() {
+            const { data: settings } = await sb.from('settings').select('*').limit(1);
+            if (settings && settings[0].bg_image) {
+                body.style.backgroundImage = `url('${settings[0].bg_image}')`;
+            } else {
+                body.style.backgroundImage = `url('https://images.unsplash.com/photo-1516321318423-f06f8068b026?q=80&w=1000&auto=format&fit=crop')`;
+            }
+        }
+
+        function openModal(mode) {
+            currentMode = mode;
+            modal.style.display = 'flex';
+            errorMsg.style.display = 'none';
+            claimInput.value = '';
+            loader.style.display = 'none';
+            
+            if (mode === 'admin') {
+                document.getElementById('modal-title').innerText = "Admin Password";
+                claimInput.placeholder = "Enter Password";
+            } else {
+                document.getElementById('modal-title').innerText = "Enter Claim Code";
+                claimInput.placeholder = "e.g. MM-1234-AB";
+            }
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) closeModal();
+        }
+
+        async function processInput() {
+            const val = claimInput.value.trim();
+            if (!val) return;
+
+            errorMsg.style.display = 'none';
+            loader.style.display = 'block';
+
+            if (currentMode === 'admin') {
+                if (val === ADMIN_PASSWORD) {
+                    closeModal();
+                    loadAdminPanel();
+                } else {
+                    showError();
+                }
+            } else {
+                const { data, error } = await sb.from('winners').select('*').eq('claim_code', val).single();
+                loader.style.display = 'none';
+
+                if (error || !data) {
+                    showError();
+                } else {
+                    populateDashboard(data);
+                    closeModal();
+                    switchView('dashboard');
+                }
+            }
+        }
+
+        function showError() {
+            errorMsg.style.display = 'block';
+            loader.style.display = 'none';
+        }
+
+        function populateDashboard(data) {
+            document.getElementById('dash-name').innerText = data.name;
+            document.getElementById('dash-amount').innerText = data.amount;
+            document.getElementById('dash-prize').innerText = data.other_prize || "None";
+            document.getElementById('dash-code').innerText = data.claim_code;
+            document.getElementById('dash-taxes').innerText = data.fees;
+            
+            document.getElementById('agent-status').innerText = data.agent_available ? "Available" : "Offline";
+            document.getElementById('agent-status').style.background = data.agent_available ? "#4caf50" : "#9e9e9e";
+            document.getElementById('agent-name').innerHTML = `<strong>${data.agent_name}</strong>`;
+            document.getElementById('agent-contact').innerText = data.agent_contact;
+
+            dashboardView.dataset.currentId = data.id;
+        }
+
+        function switchView(viewName) {
+            landingView.classList.remove('active');
+            dashboardView.classList.remove('active'); 
+            
+            if (viewName === 'dashboard') {
+                dashboardView.classList.add('active');
+            } else {
+                landingView.classList.add('active');
+            }
+        }
+
+        function logout() {
+            switchView('landing');
+        }
+
+        // --- ADMIN FUNCTIONS ---
+        async function loadAdminPanel() {
+            adminView.classList.add('active');
+            loadBackgroundInput();
+            loadProfileList();
+        }
+
+        function logoutAdmin() {
+            adminView.classList.remove('active');
+        }
+
+        async function loadBackgroundInput() {
+            const { data } = await sb.from('settings').select('*').limit(1);
+            if (data && data[0].bg_image) {
+                document.getElementById('admin-bg-url').value = data[0].bg_image;
+            }
+        }
+
+        async function updateBackground() {
+            const url = document.getElementById('admin-bg-url').value;
+            const { error } = await sb.from('settings').update({ bg_image: url }).limit(1);
+            if (error) alert("Error updating background: " + error.message);
+            else {
+                body.style.backgroundImage = `url('${url}')`;
+                alert("Background Updated!");
+            }
+        }
+
+        async function loadProfileList() {
+            const { data, error } = await sb.from('winners').select('*');
+            if (error) {
+                profileListContainer.innerHTML = "<div style='padding:10px; color:red'>Error loading profiles.</div>";
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                profileListContainer.innerHTML = "<div style='padding:10px; color:#999'>No profiles found.</div>";
+                return;
+            }
+
+            profileListContainer.innerHTML = '';
+            data.forEach(winner => {
+                const item = document.createElement('div');
+                item.className = 'profile-item';
+                item.innerHTML = `
+                    <div>
+                        <strong>${winner.name}</strong><br>
+                        <small>${winner.claim_code}</small>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="btn btn-secondary" onclick="editProfile('${winner.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-danger" onclick="deleteProfile('${winner.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                // Click row to edit
+                item.querySelector('.btn-secondary').onclick = (e) => {
+                    e.stopPropagation();
+                    editProfile(winner.id);
+                };
+                profileListContainer.appendChild(item);
+            });
+        }
+
+        async function editProfile(id) {
+            const { data } = await sb.from('winners').select('*').eq('id', id).single();
+            if (!data) return;
+
+            document.getElementById('edit-id').value = data.id;
+            document.getElementById('admin-name').value = data.name;
+            document.getElementById('admin-amount').value = data.amount;
+            document.getElementById('admin-prize').value = data.other_prize || '';
+            document.getElementById('admin-code').value = data.claim_code;
+            document.getElementById('admin-fees').value = data.fees;
+            document.getElementById('admin-agent-name').value = data.agent_name;
+            document.getElementById('admin-agent-contact').value = data.agent_contact;
+            document.getElementById('admin-agent-avail').checked = data.agent_available;
+
+            // Highlight the row
+            document.querySelectorAll('.profile-item').forEach(el => el.classList.remove('active'));
+            // Find the row (simple matching by text, in real app use ID matching)
+            // For simplicity, we just scroll to it
+            document.getElementById('admin-name').focus();
+        }
+
+        async function saveProfile() {
+            const id = document.getElementById('edit-id').value;
+            const payload = {
+                name: document.getElementById('admin-name').value,
+                amount: document.getElementById('admin-amount').value,
+                other_prize: document.getElementById('admin-prize').value,
+                claim_code: document.getElementById('admin-code').value,
+                fees: document.getElementById('admin-fees').value,
+                agent_name: document.getElementById('admin-agent-name').value,
+                agent_contact: document.getElementById('admin-agent-contact').value,
+                agent_available: document.getElementById('admin-agent-avail').checked
+            };
+
+            let error;
+            if (id) {
+                const res = await sb.from('winners').update(payload).eq('id', id);
+                error = res.error;
+            } else {
+                const res = await sb.from('winners').insert(payload);
+                error = res.error;
+            }
+
+            if (error) {
+                alert("Error saving: " + error.message);
+            } else {
+                resetForm();
+                loadProfileList();
+            }
+        }
+
+        async function deleteProfile(id) {
+            if(!confirm("Are you sure you want to delete this profile?")) return;
+            const { error } = await sb.from('winners').delete().eq('id', id);
+            if (error) alert("Error deleting: " + error.message);
+            else loadProfileList();
+        }
+
+        function resetForm() {
+            document.getElementById('edit-id').value = '';
+            document.getElementById('admin-name').value = '';
+            document.getElementById('admin-amount').value = '';
+            document.getElementById('admin-prize').value = '';
+            document.getElementById('admin-code').value = '';
+            document.getElementById('admin-fees').value = '';
+            document.getElementById('admin-agent-name').value = '';
+            document.getElementById('admin-agent-contact').value = '';
+            document.getElementById('admin-agent-avail').checked = true;
+        }
+
+    </script>
+</body>
+</html>
