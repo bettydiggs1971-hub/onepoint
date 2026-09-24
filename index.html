@@ -1,131 +1,618 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal SIP Bulk Dialer & IVR Orchestrator</title>
-    <!-- Tailwind CSS for modern layout -->
-    <script src="https://jsdelivr.net"></script>
-    <!-- JsSIP Library for Universal WebRTC SIP Connectivity -->
-    <script src="https://cloudflare.com"></script>
-    <style>
-        .status-badge { transition: all 0.3s ease; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIPFlow - 3rd Party SIP Bulk & Single Dialer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sip.js/0.20.0/sip.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+    code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(24, 24, 27, 0.4); }
+    ::-webkit-scrollbar-thumb { background: rgba(82, 82, 91, 0.5); border-radius: 9999px; }
+  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+<body class="bg-neutral-950 text-neutral-100 antialiased min-h-screen pb-32">
 
-    <div class="container mx-auto p-6 max-w-7xl">
-        <!-- Header -->
-        <header class="flex justify-between items-center border-b border-slate-800 pb-4 mb-6">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>📞</span> Universal SIP Bulk Dialer & IVR
-                </h1>
-                <p class="text-xs text-slate-400 mt-1">Direct Browser-to-SIP Trunk WebRTC Engine</p>
-            </div>
-            <div id="sip-status" class="status-badge bg-red-900/50 text-red-400 px-3 py-1.5 rounded-full text-xs font-semibold border border-red-700/50 flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span> Disconnected
-            </div>
-        </header>
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur-md px-4 sm:px-6 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-sm shadow-cyan-500/20">
+          ☎
+        </div>
+        <div>
+          <span class="font-bold text-base tracking-tight text-white">SIPFlow</span>
+          <span class="text-xs text-neutral-500 font-mono ml-2 hidden sm:inline">Bulk & Single Dialer</span>
+        </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- Left Column: SIP Configuration & Settings -->
-            <div class="space-y-6">
-                <!-- SIP Trunk Configuration -->
-                <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-5 shadow-xl backdrop-blur-sm">
-                    <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">⚙️ 1. Third-Party SIP Gateway Settings</h2>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">WebSocket Server URL (WS/WSS)</label>
-                            <input type="text" id="sip-ws-url" value="wss://your-sip-provider-or-asterisk-ip:8089/ws" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-300">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">SIP Domain / Proxy</label>
-                            <input type="text" id="sip-domain" value="://yourprovider.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-300">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">SIP Username / Auth ID</label>
-                                <input type="text" id="sip-user" value="1001" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-300">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Password</label>
-                                <input type="password" id="sip-pass" value="yourpassword" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-300">
-                            </div>
-                        </div>
-                        <button id="btn-connect" onclick="connectSIP()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg py-2.5 font-medium text-sm transition shadow-lg shadow-indigo-600/20 mt-2 cursor-pointer">
-                            Establish SIP Registration
-                        </button>
-                    </div>
-                </div>
+        <!-- Mode Buttons -->
+        <nav class="flex items-center gap-1.5 ml-2">
+          <button id="navBulkBtn" onclick="switchView('bulk')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-950/80 text-cyan-200 border border-cyan-700/60 shadow-sm transition-all">
+            Bulk Queue
+          </button>
+          <button id="navSingleBtn" onclick="switchView('single')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-white hover:bg-neutral-900 border border-transparent transition-all">
+            Single Call
+          </button>
+          <button id="navLogsBtn" onclick="switchView('logs')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-white hover:bg-neutral-900 border border-transparent transition-all">
+            SIP Logs
+          </button>
+        </nav>
+      </div>
 
-                <!-- Automated IVR Settings -->
-                <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-5 shadow-xl backdrop-blur-sm">
-                    <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">🎙️ 2. Dynamic IVR Flow Logic</h2>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Audio Announcement URL (.mp3/.wav)</label>
-                            <input type="text" id="ivr-audio-url" value="https://google.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-400 text-xs">
-                        </div>
-                        <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/30 space-y-2">
-                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">DTMF Keypress Rules</span>
-                            <div class="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
-                                <span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded font-mono text-white">Press 1</span>
-                                <span class="text-emerald-400 font-medium">Mark 'Confirmed' & Hangup</span>
-                            </div>
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded font-mono text-white">Press 2</span>
-                                <span class="text-amber-400 font-medium">Transfer to Live Rep Agent</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <!-- Action & Trunk Controls -->
+      <div class="flex items-center gap-2">
+        <button onclick="openConfigModal()" id="trunkBadge" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-800 bg-neutral-900 text-xs font-mono text-neutral-400 hover:text-white transition-all">
+          <span id="trunkDot" class="w-2 h-2 rounded-full bg-neutral-500"></span>
+          <span id="trunkLabel">Trunk Setup</span>
+        </button>
 
-            <!-- Middle & Right Columns: Campaign Engine -->
-            <div class="lg:grid lg:grid-cols-2 lg:col-span-2 gap-6 space-y-6 lg:space-y-0">
-                
-                <!-- Campaign Queue & List Management -->
-                <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-5 shadow-xl backdrop-blur-sm flex flex-col h-full">
-                    <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">📊 3. Lead List Entry & Control</h2>
-                    <div class="mb-4">
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Paste Numbers (One per line)</label>
-                        <textarea id="phone-leads" rows="6" placeholder="+18005550199&#10;+18005550123&#10;+18005550145" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm font-mono focus:outline-none focus:border-indigo-500 text-emerald-400 placeholder-slate-600 resize-none"></textarea>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Concurrency (Max Channels)</label>
-                            <input type="number" id="dial-concurrency" value="1" min="1" max="5" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-300">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Dial Interval (Seconds)</label>
-                            <input type="number" id="dial-interval" value="3" min="1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-300">
-                        </div>
-                    </div>
+        <button id="masterBulkBtn" onclick="toggleBulkDialer()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg shadow-sm transition-all">
+          ▶ Start Bulk
+        </button>
+      </div>
+    </div>
+  </header>
 
-                    <div class="grid grid-cols-2 gap-3 mt-auto">
-                        <button id="btn-start-dialer" onclick="startBulkDialer()" disabled class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg py-3 font-semibold text-sm transition shadow-lg shadow-emerald-600/10 cursor-pointer">
-                            ▶️ Start Dialer
-                        </button>
-                        <button id="btn-stop-dialer" onclick="stopBulkDialer()" disabled class="w-full bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg py-3 font-semibold text-sm transition cursor-pointer">
-                            ⏹️ Stop Dialer
-                        </button>
-                    </div>
-                </div>
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-                <!-- Real-Time Metrics & Activity Feed -->
-                <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-5 shadow-xl backdrop-blur-sm flex flex-col h-full">
-                    <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">📈 Live Metrics & Call Logs</h2>
-                    
-                    <!-- Analytics Grid -->
-                    <div class="grid grid-cols-3 gap-2 mb-4">
-                        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/40 text-center">
-                            <div class="text-xs text-slate-400">Total</div>
-                            <div id="stat-total" class="text-xl font-bold text-white mt-0.5">0</div>
-                        </div>
-                        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/40 text-center">
-                            <div class="text-xs text-emerald-400">Answered</div>
-                            <div id="stat-answered" class="text-xl font-bold text-emerald-400 mt-0.5">0</div>
-                        </div>
+    <!-- VIEW: BULK CALLS QUEUE -->
+    <div id="bulkView" class="space-y-6">
+      <!-- 4 Top Metrics -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5">
+          <span class="text-xs font-medium text-neutral-400 block">Total Contacts</span>
+          <span id="metricTotal" class="text-2xl font-bold font-mono text-white mt-1 block">5</span>
+        </div>
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5">
+          <span class="text-xs font-medium text-neutral-400 block">Pending Queue</span>
+          <span id="metricPending" class="text-2xl font-bold font-mono text-cyan-400 mt-1 block">5</span>
+        </div>
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5">
+          <span class="text-xs font-medium text-neutral-400 block">Completed</span>
+          <span id="metricCompleted" class="text-2xl font-bold font-mono text-emerald-400 mt-1 block">0</span>
+        </div>
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5">
+          <span class="text-xs font-medium text-neutral-400 block">Connect Rate</span>
+          <span id="metricRate" class="text-2xl font-bold font-mono text-white mt-1 block">0%</span>
+        </div>
+      </div>
+
+      <!-- Controls & Importer -->
+      <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-neutral-400 font-medium">Auto-Dial Delay:</span>
+          <select id="wrapUpSelect" class="bg-neutral-950 border border-neutral-800 text-xs rounded-lg px-2.5 py-1.5 text-neutral-200">
+            <option value="3">3 seconds</option>
+            <option value="5" selected>5 seconds</option>
+            <option value="10">10 seconds</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="openImportModal()" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-medium rounded-lg border border-neutral-700">
+            + Import Leads
+          </button>
+          <button onclick="resetQueueProgress()" class="px-3 py-1.5 bg-neutral-950 hover:bg-neutral-800 text-neutral-400 hover:text-white text-xs font-medium rounded-lg border border-neutral-800">
+            Reset Status
+          </button>
+          <button onclick="exportCsv()" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium rounded-lg border border-neutral-700">
+            Export Results
+          </button>
+        </div>
+      </div>
+
+      <!-- Contacts Table -->
+      <div class="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-neutral-950/80 border-b border-neutral-800 text-neutral-400">
+              <tr>
+                <th class="px-4 py-3">Lead / Company</th>
+                <th class="px-4 py-3">Phone Number</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3 text-right">Attempts</th>
+                <th class="px-4 py-3">Disposition</th>
+                <th class="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="contactsTbody" class="divide-y divide-neutral-800/60 text-neutral-300">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: SINGLE CALL DIALPAD -->
+    <div id="singleView" class="hidden max-w-4xl mx-auto space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <!-- Main Dialpad -->
+        <div class="md:col-span-7 bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-xl space-y-5">
+          <div>
+            <span class="px-2 py-0.5 text-[11px] font-mono uppercase tracking-wider font-semibold rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300">
+              Single Call Mode
+            </span>
+            <h2 class="text-base font-bold text-white mt-1">Direct Outbound Dialpad</h2>
+            <p class="text-xs text-neutral-400">Place single outbound calls instantly over your SIP trunk</p>
+          </div>
+
+          <!-- Display Input -->
+          <div class="relative">
+            <input type="text" id="directNumberInput" placeholder="Enter phone number (+1...) or SIP URI" class="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-xl font-mono text-center text-white placeholder:text-neutral-600 focus:outline-none focus:border-cyan-500 font-semibold tabular-nums" />
+            <button onclick="backspaceNumber()" class="absolute right-3 top-3.5 p-1 text-neutral-500 hover:text-white">⌫</button>
+          </div>
+
+          <!-- DTMF Matrix -->
+          <div class="grid grid-cols-3 gap-2.5">
+            <button onclick="pressDtmf('1')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">1</button>
+            <button onclick="pressDtmf('2')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">2 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">ABC</span></button>
+            <button onclick="pressDtmf('3')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">3 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">DEF</span></button>
+            <button onclick="pressDtmf('4')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">4 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">GHI</span></button>
+            <button onclick="pressDtmf('5')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">5 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">JKL</span></button>
+            <button onclick="pressDtmf('6')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">6 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">MNO</span></button>
+            <button onclick="pressDtmf('7')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">7 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">PQRS</span></button>
+            <button onclick="pressDtmf('8')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">8 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">TUV</span></button>
+            <button onclick="pressDtmf('9')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">9 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">WXYZ</span></button>
+            <button onclick="pressDtmf('*')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">*</button>
+            <button onclick="pressDtmf('0')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">0 <span class="text-[9px] text-neutral-400 block -mt-1 font-sans">+</span></button>
+            <button onclick="pressDtmf('#')" class="h-13 py-3 bg-neutral-950/80 hover:bg-neutral-800 rounded-xl border border-neutral-800 font-mono text-xl font-bold text-white">#</button>
+          </div>
+
+          <!-- Place Call Button -->
+          <button id="singleCallBtn" onclick="dialDirectNumber()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40 transition-all">
+            ☎ Place Single Call
+          </button>
+        </div>
+
+        <!-- Quick Destinations & Test Numbers -->
+        <div class="md:col-span-5 space-y-4">
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
+            <h3 class="text-xs font-semibold text-neutral-300">Carrier Echo & Test Numbers</h3>
+            <button onclick="setTestDest('9196')" class="w-full p-2.5 bg-neutral-950 border border-neutral-800 hover:border-neutral-700 rounded-lg text-left transition-colors block">
+              <span class="font-mono font-bold text-white text-xs block">9196</span>
+              <span class="text-[11px] text-neutral-400">SIP Echo Audio Loopback</span>
+            </button>
+            <button onclick="setTestDest('+18004377950')" class="w-full p-2.5 bg-neutral-950 border border-neutral-800 hover:border-neutral-700 rounded-lg text-left transition-colors block">
+              <span class="font-mono font-bold text-white text-xs block">+1 800-437-7950</span>
+              <span class="text-[11px] text-neutral-400">US PSTN Toll-Free Test</span>
+            </button>
+          </div>
+
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-2">
+            <h3 class="text-xs font-semibold text-neutral-300">Transfer Number to Bulk</h3>
+            <p class="text-xs text-neutral-400">Send current number directly into the active bulk queue.</p>
+            <button onclick="transferToBulkQueue()" class="w-full py-2 bg-neutral-800 hover:bg-neutral-700 text-cyan-300 text-xs font-medium rounded-lg border border-neutral-700">
+              + Add to Bulk Queue
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: SIP LOGS -->
+    <div id="logsView" class="hidden space-y-4">
+      <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-white">Live SIP Diagnostics</h2>
+          <p class="text-xs text-neutral-400">Inbound and outbound SIP transactions</p>
+        </div>
+        <button onclick="clearLogs()" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs text-rose-300 rounded-lg border border-neutral-700">
+          Clear Logs
+        </button>
+      </div>
+      <div id="logsContainer" class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 font-mono text-xs max-h-96 overflow-y-auto space-y-2">
+        <div class="text-neutral-500">No events logged yet. Configure SIP trunk and make a call.</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FLOATING CALL BAR -->
+  <div id="activeCallBar" class="fixed bottom-0 left-0 right-0 z-40 bg-neutral-900/98 border-t border-neutral-700/80 backdrop-blur-xl shadow-2xl p-3 sm:px-6 hidden">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <span id="callContactName" class="text-sm font-bold text-white">Dialing...</span>
+          <span id="callStateBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800/60">CALLING</span>
+        </div>
+        <div id="callContactPhone" class="text-xs text-neutral-400 font-mono mt-0.5">+14155550143</div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="text-xl sm:text-2xl font-mono font-bold text-white tabular-nums" id="callTimer">00:00</div>
+        <button onclick="toggleMute()" id="muteBtn" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl text-xs font-medium text-neutral-200">
+          Mute
+        </button>
+        <button onclick="hangupCall()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl text-xs shadow-md shadow-rose-900/40">
+          Hangup
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <select id="quickDisposition" onchange="applyDisposition(this.value)" class="bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none">
+          <option value="">Disposition...</option>
+          <option value="Interested">Interested</option>
+          <option value="Callback Requested">Callback Requested</option>
+          <option value="Voicemail Left">Voicemail Left</option>
+          <option value="Not Interested">Not Interested</option>
+          <option value="Wrong Number">Wrong Number</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SIP CREDENTIALS -->
+  <div id="configModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-neutral-900 border border-neutral-800 rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-neutral-800 pb-3">
+        <h3 class="text-sm font-bold text-white">3rd Party SIP Trunk Credentials</h3>
+        <button onclick="closeConfigModal()" class="text-neutral-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-neutral-300 font-medium mb-1">SIP Transport</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="setTransport('UDP')" id="btnProtoUDP" class="p-2 border rounded-lg border-cyan-500 bg-cyan-950/40 text-cyan-200 font-bold">UDP (5060)</button>
+            <button type="button" onclick="setTransport('TLS')" id="btnProtoTLS" class="p-2 border rounded-lg border-neutral-800 text-neutral-400 font-bold">TLS (5061)</button>
+            <button type="button" onclick="setTransport('WSS')" id="btnProtoWSS" class="p-2 border rounded-lg border-neutral-800 text-neutral-400 font-bold">WSS / WebRTC</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-neutral-300 font-medium mb-1">SIP Domain / Host IP *</label>
+          <input type="text" id="sipDomain" placeholder="e.g. sip.carrier.com or 198.51.100.1" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white font-mono" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-neutral-300 font-medium mb-1">Port</label>
+            <input type="number" id="sipPort" value="5060" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-neutral-300 font-medium mb-1">SIP Username / Ext *</label>
+            <input type="text" id="sipUser" placeholder="e.g. 1001" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white font-mono" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-neutral-300 font-medium mb-1">SIP Password / Secret *</label>
+          <input type="password" id="sipPass" placeholder="••••••••••••" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white font-mono" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-neutral-800">
+        <button onclick="closeConfigModal()" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-xs text-neutral-300 font-medium">Cancel</button>
+        <button onclick="saveAndConnectSip()" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xs font-semibold text-white">Save & Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORT CONTACTS -->
+  <div id="importModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-neutral-900 border border-neutral-800 rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-neutral-800 pb-3">
+        <h3 class="text-sm font-bold text-white">Import Bulk Leads</h3>
+        <button onclick="closeImportModal()" class="text-neutral-400 hover:text-white">✕</button>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-neutral-300 mb-1">Paste Numbers or CSV (One per line):</label>
+        <textarea id="importTextarea" rows="6" placeholder="+14155550143, Sarah Jenkins, Nexus Logistics&#10;+12125550188, David Alvarez, Apex Financial" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-xs font-mono text-white"></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-2">
+        <button onclick="closeImportModal()" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-xs text-neutral-300">Cancel</button>
+        <button onclick="parseAndImportContacts()" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xs font-semibold text-white">Import Contacts</button>
+      </div>
+    </div>
+  </div>
+
+  <audio id="remoteAudio" autoplay class="hidden"></audio>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // State
+    let contacts = [
+      { id: '1', name: 'Sarah Jenkins', phone: '+14155550143', company: 'Nexus Logistics', status: 'pending', attempts: 0, duration: 0 },
+      { id: '2', name: 'David Alvarez', phone: '+12125550188', company: 'Apex Financial', status: 'pending', attempts: 0, duration: 0 },
+      { id: '3', name: 'Elena Rostova', phone: '+13125550192', company: 'CloudScale Systems', status: 'pending', attempts: 0, duration: 0 },
+      { id: '4', name: 'Marcus Vance', phone: '+16505550119', company: 'Vance Law', status: 'pending', attempts: 0, duration: 0 },
+      { id: '5', name: 'Amara Patel', phone: '+15125550174', company: 'Aura Health', status: 'pending', attempts: 0, duration: 0 }
+    ];
+
+    let currentCall = null;
+    let isDialingBulk = false;
+    let bulkPaused = false;
+    let callTimerInterval = null;
+    let callSeconds = 0;
+    let sipTransport = 'UDP';
+
+    // Audio DTMF Generator
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const dtmfFreqs = {
+      '1': [697, 1209], '2': [697, 1336], '3': [697, 1477],
+      '4': [770, 1209], '5': [770, 1336], '6': [770, 1477],
+      '7': [852, 1209], '8': [852, 1336], '9': [852, 1477],
+      '*': [941, 1209], '0': [941, 1336], '#': [941, 1477]
+    };
+
+    function playTone(digit) {
+      if (!dtmfFreqs[digit]) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc1.frequency.value = dtmfFreqs[digit][0];
+      osc2.frequency.value = dtmfFreqs[digit][1];
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+      osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
+      osc1.start(); osc2.start();
+      osc1.stop(audioCtx.currentTime + 0.15); osc2.stop(audioCtx.currentTime + 0.15);
+    }
+
+    function renderContacts() {
+      const tbody = document.getElementById('contactsTbody');
+      tbody.innerHTML = '';
+      let pending = 0, completed = 0;
+
+      contacts.forEach(c => {
+        if (c.status === 'pending') pending++;
+        if (c.status === 'completed') completed++;
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-neutral-800/40 transition-colors';
+        tr.innerHTML = `
+          <td class="px-4 py-3">
+            <span class="font-bold text-white block">${c.name}</span>
+            <span class="text-[11px] text-neutral-500">${c.company || '—'}</span>
+          </td>
+          <td class="px-4 py-3 font-mono font-medium text-cyan-400 tabular-nums">${c.phone}</td>
+          <td class="px-4 py-3">
+            <span class="${c.status === 'connected' ? 'text-emerald-400 font-bold' : c.status === 'completed' ? 'text-emerald-400' : c.status === 'dialing' ? 'text-amber-400 font-bold animate-pulse' : 'text-neutral-400'}">
+              ${c.status.toUpperCase()}
+            </span>
+          </td>
+          <td class="px-4 py-3 font-mono tabular-nums text-right text-neutral-400">${c.attempts}</td>
+          <td class="px-4 py-3">
+            <select onchange="updateContactDisp('${c.id}', this.value)" class="bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-[11px] text-neutral-300">
+              <option value="">${c.disposition || 'No disposition'}</option>
+              <option value="Interested">Interested</option>
+              <option value="Callback">Callback</option>
+              <option value="Meeting Scheduled">Meeting Scheduled</option>
+              <option value="Voicemail">Voicemail</option>
+              <option value="Not Interested">Not Interested</option>
+            </select>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="startSingleCallFromQueue('${c.id}')" class="px-2.5 py-1 bg-neutral-800 hover:bg-emerald-600 text-white rounded text-xs">
+              ☎ Dial
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('metricTotal').innerText = contacts.length;
+      document.getElementById('metricPending').innerText = pending;
+      document.getElementById('metricCompleted').innerText = completed;
+      document.getElementById('metricRate').innerText = contacts.length > 0 ? Math.round((completed / contacts.length) * 100) + '%' : '0%';
+    }
+
+    function switchView(view) {
+      document.getElementById('bulkView').classList.toggle('hidden', view !== 'bulk');
+      document.getElementById('singleView').classList.toggle('hidden', view !== 'single');
+      document.getElementById('logsView').classList.toggle('hidden', view !== 'logs');
+      
+      document.getElementById('navBulkBtn').className = view === 'bulk' ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-950/80 text-cyan-200 border border-cyan-700/60 shadow-sm' : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-white';
+      document.getElementById('navSingleBtn').className = view === 'single' ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-950/80 text-emerald-200 border border-emerald-700/60 shadow-sm' : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-white';
+      document.getElementById('navLogsBtn').className = view === 'logs' ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 text-white' : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-white';
+    }
+
+    function pressDtmf(d) {
+      playTone(d);
+      const input = document.getElementById('directNumberInput');
+      input.value += d;
+    }
+
+    function backspaceNumber() {
+      const input = document.getElementById('directNumberInput');
+      input.value = input.value.slice(0, -1);
+    }
+
+    function setTestDest(d) {
+      document.getElementById('directNumberInput').value = d;
+    }
+
+    function transferToBulkQueue() {
+      const num = document.getElementById('directNumberInput').value.trim();
+      if (!num) return;
+      contacts.push({ id: Date.now().toString(), name: 'Direct Lead', phone: num, company: '', status: 'pending', attempts: 0, duration: 0 });
+      renderContacts();
+      alert(`Added ${num} to Bulk Queue!`);
+    }
+
+    function dialDirectNumber() {
+      const num = document.getElementById('directNumberInput').value.trim();
+      if (!num) return;
+      initiateCall(num, 'Direct Call');
+    }
+
+    function startSingleCallFromQueue(id) {
+      const c = contacts.find(x => x.id === id);
+      if (!c) return;
+      c.attempts++;
+      initiateCall(c.phone, c.name, c);
+    }
+
+    function initiateCall(phone, name, contactRef = null) {
+      currentCall = { phone, name, contactRef };
+      document.getElementById('callContactName').innerText = name || phone;
+      document.getElementById('callContactPhone').innerText = phone;
+      document.getElementById('callStateBadge').innerText = 'RINGING...';
+      document.getElementById('activeCallBar').classList.remove('hidden');
+
+      logEvent('sip_out', `INVITE sip:${phone}`, `Initiating call to ${phone}`);
+
+      callSeconds = 0;
+      clearInterval(callTimerInterval);
+      callTimerInterval = setInterval(() => {
+        callSeconds++;
+        const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+        const secs = String(callSeconds % 60).padStart(2, '0');
+        document.getElementById('callTimer').innerText = `${mins}:${secs}`;
+      }, 1000);
+
+      // Simulate connected state transition
+      setTimeout(() => {
+        if (currentCall) {
+          document.getElementById('callStateBadge').innerText = 'CONNECTED';
+          document.getElementById('callStateBadge').className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60';
+          if (currentCall.contactRef) currentCall.contactRef.status = 'connected';
+          renderContacts();
+          logEvent('sip_in', '200 OK (INVITE)', `Call connected with 200 OK SDP`);
+        }
+      }, 2500);
+    }
+
+    function hangupCall() {
+      if (currentCall && currentCall.contactRef) {
+        currentCall.contactRef.status = 'completed';
+        currentCall.contactRef.duration = callSeconds;
+      }
+      clearInterval(callTimerInterval);
+      document.getElementById('activeCallBar').classList.add('hidden');
+      logEvent('sip_out', 'BYE sip:destination', 'Call disconnected');
+      renderContacts();
+
+      // If bulk dialer is active, advance to next
+      if (isDialingBulk && !bulkPaused) {
+        const wrapSec = parseInt(document.getElementById('wrapUpSelect').value, 10);
+        setTimeout(() => {
+          advanceBulkQueue();
+        }, wrapSec * 1000);
+      }
+      currentCall = null;
+    }
+
+    function toggleBulkDialer() {
+      if (!isDialingBulk) {
+        isDialingBulk = true;
+        document.getElementById('masterBulkBtn').innerText = '⏸ Pause Bulk';
+        advanceBulkQueue();
+      } else {
+        isDialingBulk = false;
+        document.getElementById('masterBulkBtn').innerText = '▶ Start Bulk';
+      }
+    }
+
+    function advanceBulkQueue() {
+      if (!isDialingBulk) return;
+      const next = contacts.find(c => c.status === 'pending');
+      if (next) {
+        next.attempts++;
+        next.status = 'dialing';
+        renderContacts();
+        initiateCall(next.phone, next.name, next);
+      } else {
+        isDialingBulk = false;
+        document.getElementById('masterBulkBtn').innerText = '▶ Start Bulk';
+        alert('All leads in queue have been dialed!');
+      }
+    }
+
+    function logEvent(type, title, desc) {
+      const container = document.getElementById('logsContainer');
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = 'p-2 rounded bg-neutral-950 border border-neutral-800 flex items-start justify-between';
+      div.innerHTML = `
+        <div>
+          <span class="text-cyan-400 font-bold">${title}</span>
+          <p class="text-neutral-400 text-[11px] mt-0.5">${desc}</p>
+        </div>
+        <span class="text-neutral-500 font-mono text-[10px]">${time}</span>
+      `;
+      container.prepend(div);
+    }
+
+    function clearLogs() {
+      document.getElementById('logsContainer').innerHTML = '<div class="text-neutral-500">Logs cleared.</div>';
+    }
+
+    // Modal controls
+    function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
+    function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
+    function openImportModal() { document.getElementById('importModal').classList.remove('hidden'); }
+    function closeImportModal() { document.getElementById('importModal').classList.add('hidden'); }
+
+    function setTransport(p) {
+      sipTransport = p;
+      document.getElementById('btnProtoUDP').className = p === 'UDP' ? 'p-2 border rounded-lg border-cyan-500 bg-cyan-950/40 text-cyan-200 font-bold' : 'p-2 border rounded-lg border-neutral-800 text-neutral-400 font-bold';
+      document.getElementById('btnProtoTLS').className = p === 'TLS' ? 'p-2 border rounded-lg border-cyan-500 bg-cyan-950/40 text-cyan-200 font-bold' : 'p-2 border rounded-lg border-neutral-800 text-neutral-400 font-bold';
+      document.getElementById('btnProtoWSS').className = p === 'WSS' ? 'p-2 border rounded-lg border-cyan-500 bg-cyan-950/40 text-cyan-200 font-bold' : 'p-2 border rounded-lg border-neutral-800 text-neutral-400 font-bold';
+      document.getElementById('sipPort').value = p === 'TLS' ? 5061 : 5060;
+    }
+
+    function saveAndConnectSip() {
+      const domain = document.getElementById('sipDomain').value.trim();
+      const user = document.getElementById('sipUser').value.trim();
+      if (!domain || !user) {
+        alert('Please enter SIP Domain and Username');
+        return;
+      }
+      document.getElementById('trunkDot').className = 'w-2 h-2 rounded-full bg-emerald-400';
+      document.getElementById('trunkLabel').innerText = `${user}@${domain} (${sipTransport})`;
+      logEvent('sip_out', `REGISTER sip:${domain}`, `Sending SIP REGISTER for user ${user} over ${sipTransport}`);
+      closeConfigModal();
+    }
+
+    function parseAndImportContacts() {
+      const text = document.getElementById('importTextarea').value;
+      const lines = text.split('\n').filter(l => l.trim().length > 0);
+      lines.forEach((line, i) => {
+        const parts = line.split(',');
+        contacts.push({
+          id: (Date.now() + i).toString(),
+          name: parts[1] ? parts[1].trim() : `Contact ${contacts.length + 1}`,
+          phone: parts[0].trim(),
+          company: parts[2] ? parts[2].trim() : '',
+          status: 'pending',
+          attempts: 0,
+          duration: 0
+        });
+      });
+      renderContacts();
+      closeImportModal();
+    }
+
+    function resetQueueProgress() {
+      contacts.forEach(c => { c.status = 'pending'; c.attempts = 0; c.duration = 0; });
+      renderContacts();
+    }
+
+    function exportCsv() {
+      let csv = 'Phone,Name,Company,Status,Attempts,Duration\n';
+      contacts.forEach(c => {
+        csv += `"${c.phone}","${c.name}","${c.company}","${c.status}",${c.attempts},${c.duration}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'sipflow_contacts.csv';
+      a.click();
+    }
+
+    // Initialize table
+    renderContacts();
+  </script>
+</body>
+</html>
